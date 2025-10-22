@@ -19,13 +19,5 @@
       "src": "/(.*)",
       "dest": "/public/$1"
     }
-  ],
-  "env": {
-    "GOOGLE_PROJECT_ID": "@google-project-id",
-    "GOOGLE_PRIVATE_KEY_ID": "@google-private-key-id",
-    "GOOGLE_PRIVATE_KEY": "@google-private-key",
-    "GOOGLE_CLIENT_EMAIL": "@google-client-email",
-    "GOOGLE_CLIENT_ID": "@google-client-id",
-    "GOOGLE_DRIVE_FOLDER_ID": "@google-drive-folder-id"
-  }
+  ]
 }
