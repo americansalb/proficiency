@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Proficiency Screening</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d7377;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        h1 {
+            color: #0d7377;
+            margin-bottom: 20px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #0d7377;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+
+        p {
+            color: #333;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .button {
+            background: #0d7377;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        .button:hover {
+            background: #14FFEC;
+            color: #0d7377;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(13, 115, 119, 0.4);
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .video-container {
+            margin: 30px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background: #000;
+            position: relative;
+        }
+
+        .video-container iframe {
+            width: 100%;
+            height: 450px;
+            border: none;
+            display: block;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            cursor: default;
+        }
+
+        .instructions-box {
+            background: #f0f9f9;
+            border-left: 4px solid #0d7377;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .instructions-box ol {
+            margin-left: 20px;
+            color: #0d7377;
+        }
+
+        .instructions-box li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .passcode-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .passcode-input:focus {
+            outline: none;
+            border-color: #0d7377;
+        }
+
+        .checkbox-group {
+            margin: 25px 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 12px;
+            background: #f0f9f9;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .checkbox-item:hover {
+            background: #d9f2f2;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+            accent-color: #0d7377;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            color: #0d7377;
+            font-size: 15px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #0d7377;
+        }
+
+        .error-message {
+            color: #c0392b;
+            background: #fadbd8;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .success-message {
+            color: #27ae60;
+            background: #d4edda;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .question-header {
+            background: #0d7377;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .repeat-button {
+            background: #14FFEC;
+            color: #0d7377;
+            border: none;
+            padding: 12px 30px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 20px 10px 20px 0;
+            transition: background 0.2s;
+            font-weight: 600;
+        }
+
+        .repeat-button:hover:not(:disabled) {
+            background: #0ff5d4;
+        }
+
+        .repeat-button:disabled {
+            background: #95a5a6;
+            color: white;
+            cursor: not-allowed;
+        }
+
+        .repeat-counter {
+            display: inline-block;
+            margin-left: 10px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .recording-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #e74c3c;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .recording-indicator.active {
+            display: flex;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .recording-dot {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .camera-permission {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .camera-permission h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0d7377;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .upload-status {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+    <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body>
+    <div class="recording-indicator" id="recordingIndicator">
+        <div class="recording-dot"></div>
+        <span>Recording</span>
+    </div>
+
+    <div class="container">
+        <!-- Page 1: Welcome -->
+        <div class="page active" id="page1">
+            <h1>Welcome to the English Proficiency Screening</h1>
+            <p class="center" style="margin: 40px 0;">
+                This screening will assess your English listening and speaking abilities through a series of questions.
+            </p>
+            <div class="camera-permission">
+                <h3>⚠️ Camera & Microphone Required</h3>
+                <p>This test requires access to your camera and microphone. Your responses will be recorded for evaluation purposes. Please ensure:</p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>You are in a quiet environment</li>
+                    <li>Your camera and microphone are working</li>
+                    <li>You grant permission when prompted</li>
+                </ul>
+            </div>
+            <div class="center">
+                <button class="button" onclick="goToPage(2)">View Instructions</button>
+            </div>
+        </div>
+
+        <!-- Page 2: Instructions -->
+        <div class="page" id="page2">
+            <h1>English Proficiency Test Instructions</h1>
+            
+            <div class="video-container">
+                <div id="instructionsPlayer"></div>
+                <div class="video-overlay"></div>
+            </div>
+
+            <div class="instructions-box">
+                <ol>
+                    <li>You will listen carefully to questions you're asked in English, and you will respond to them, also in English.</li>
+                    <li>There are no right or wrong answers, rather, we're testing to see your ability to listen and speak in the English language.</li>
+                    <li>Please provide complete responses.</li>
+                    <li>You may repeat each question up to two times before responding.</li>
+                </ol>
+            </div>
+
+            <p style="text-align: center; font-weight: 600; margin: 30px 0;">
+                There are a total of 5 questions. Once you are ready, please click "Begin", and you will be asked for a passcode.
+            </p>
+
+            <div class="center">
+                <button class="button" onclick="goToPage(3)">Begin</button>
+            </div>
+        </div>
+
+        <!-- Page 3: Passcode and Verification -->
+        <div class="page" id="page3">
+            <h1>Before You Begin</h1>
+            
+            <h2 style="margin-top: 30px;">Enter Passcode</h2>
+            <input 
+                type="text" 
+                id="passcodeInput" 
+                class="passcode-input" 
+                placeholder="Enter your passcode"
+                maxlength="13">
+            <div class="error-message" id="passcodeError">Invalid passcode. Please try again.</div>
+
+            <h2 style="margin-top: 30px;">Verification Checklist</h2>
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="check1">
+                    <label for="check1">I am ready to begin the test</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="check2">
+                    <label for="check2">I will enable my camera and microphone when prompted</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="check3">
+                    <label for="check3">I am in a quiet environment</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="check4">
+                    <label for="check4">I will not access outside resources or outside assistance</label>
+                </div>
+            </div>
+
+            <h2>Electronic Signature</h2>
+            <input 
+                type="text" 
+                id="fullName" 
+                class="text-input" 
+                placeholder="Type your full name as electronic signature">
+
+            <div class="center">
+                <button class="button" id="beginBtn" onclick="validateAndBegin()">Begin Question #1</button>
+            </div>
+        </div>
+
+        <!-- Pages 4-8: Questions 1-5 -->
+        <div class="page" id="page4">
+            <div class="question-header">
+                <h2 style="color: white; margin: 0;">Question 1 of 5</h2>
+            </div>
+            
+            <div class="video-container">
+                <div id="player1"></div>
+                <div class="video-overlay"></div>
+            </div>
+
+            <div class="center">
+                <button class="repeat-button" id="repeat1" onclick="repeatVideo(1)">
+                    🔄 Repeat Question
+                </button>
+                <span class="repeat-counter" id="counter1">Repeats remaining: 2</span>
+            </div>
+
+            <div class="center">
+                <button class="button" onclick="goToPage(5)">Next Question</button>
+            </div>
+        </div>
+
+        <div class="page" id="page5">
+            <div class="question-header">
+                <h2 style="color: white; margin: 0;">Question 2 of 5</h2>
+            </div>
+            
+            <div class="video-container">
+                <div id="player2"></div>
+                <div class="video-overlay"></div>
+            </div>
+
+            <div class="center">
+                <button class="repeat-button" id="repeat2" onclick="repeatVideo(2)">
+                    🔄 Repeat Question
+                </button>
+                <span class="repeat-counter" id="counter2">Repeats remaining: 2</span>
+            </div>
+
+            <div class="center">
+                <button class="button" onclick="goToPage(6)">Next Question</button>
+            </div>
+        </div>
+
+        <div class="page" id="page6">
+            <div class="question-header">
+                <h2 style="color: white; margin: 0;">Question 3 of 5</h2>
+            </div>
+            
+            <div class="video-container">
+                <div id="player3"></div>
+                <div class="video-overlay"></div>
+            </div>
+
+            <div class="center">
+                <button class="repeat-button" id="repeat3" onclick="repeatVideo(3)">
+                    🔄 Repeat Question
+                </button>
+                <span class="repeat-counter" id="counter3">Repeats remaining: 2</span>
+            </div>
+
+            <div class="center">
+                <button class="button" onclick="goToPage(7)">Next Question</button>
+            </div>
+        </div>
+
+        <div class="page" id="page7">
+            <div class="question-header">
+                <h2 style="color: white; margin: 0;">Question 4 of 5</h2>
+            </div>
+            
+            <div class="video-container">
+                <div id="player4"></div>
+                <div class="video-overlay"></div>
+            </div>
+
+            <div class="center">
+                <button class="repeat-button" id="repeat4" onclick="repeatVideo(4)">
+                    🔄 Repeat Question
+                </button>
+                <span class="repeat-counter" id="counter4">Repeats remaining: 2</span>
+            </div>
+
+            <div class="center">
+                <button class="button" onclick="goToPage(8)">Next Question</button>
+            </div>
+        </div>
+
+        <div class="page" id="page8">
+            <div class="question-header">
+                <h2 style="color: white; margin: 0;">Question 5 of 5</h2>
+            </div>
+            
+            <div class="video-container">
+                <div id="player5"></div>
+                <div class="video-overlay"></div>
+            </div>
+
+            <div class="center">
+                <button class="repeat-button" id="repeat5" onclick="repeatVideo(5)">
+                    🔄 Repeat Question
+                </button>
+                <span class="repeat-counter" id="counter5">Repeats remaining: 2</span>
+            </div>
+
+            <div class="center">
+                <button class="button" onclick="completeTest()">Complete Test</button>
+            </div>
+        </div>
+
+        <!-- Page 9: Upload Progress -->
+        <div class="page" id="page9">
+            <h1>Uploading Your Recording</h1>
+            <div class="upload-status">
+                <div class="loading-spinner" id="uploadSpinner"></div>
+                <p id="uploadMessage">Please wait while we upload your test recording...</p>
+                <div class="success-message" id="uploadSuccess">
+                    ✓ Recording uploaded successfully!
+                </div>
+                <div class="error-message" id="uploadError">
+                    ✗ Upload failed. Please contact support.
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 10: Completion -->
+        <div class="page" id="page10">
+            <h1>Test Complete</h1>
+            <p class="center" style="margin: 40px 0; font-size: 18px;">
+                Thank you for completing the English Proficiency Screening!
+            </p>
+            <p class="center" style="color: #7f8c8d;">
+                Your recording has been submitted successfully. You may now close this window.
+            </p>
+        </div>
+    </div>
+
+    <script src="/js/recording.js"></script>
+    <script src="/js/quiz.js"></script>
+</body>
+</html>
