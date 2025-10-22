@@ -73,6 +73,7 @@ export default async function handler(req, res) {
       requestBody: fileMetadata,
       media: media,
       fields: 'id, name, webViewLink',
+      supportsAllDrives: true,
     });
 
     console.log('File uploaded to Google Drive:', file.data);
