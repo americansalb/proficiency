@@ -206,16 +206,22 @@ async function completeTest() {
     document.getElementById('uploadSpinner').style.display = 'block';
     
     try {
-        const recordingBlob = await window.recordingManager.stopRecording();
+        // Get both video and audio blobs
+        const { videoBlob, audioBlob } = await window.recordingManager.stopRecording();
         console.log('Recording stopped, starting upload...');
         
-        // Upload recording
-        const result = await window.recordingManager.uploadRecording(recordingBlob);
+        // Upload both recordings (audio first, then video)
+        const result = await window.recordingManager.uploadRecording(videoBlob, audioBlob);
         
         // Show success
         document.getElementById('uploadSpinner').style.display = 'none';
         document.getElementById('uploadSuccess').style.display = 'block';
-        document.getElementById('uploadMessage').textContent = 'Your test has been submitted successfully!';
+        
+        if (result.audioOnly) {
+            document.getElementById('uploadMessage').textContent = 'Audio uploaded successfully! (Video upload failed, but we have your audio recording)';
+        } else {
+            document.getElementById('uploadMessage').textContent = 'Your test has been submitted successfully!';
+        }
         
         // Go to completion page after 2 seconds
         setTimeout(() => {
