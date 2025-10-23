@@ -11,7 +11,7 @@ export default async function uploadHandler(req, res) {
   try {
     // Parse the multipart form data
     const form = formidable({
-      maxFileSize: 200 * 1024 * 1024, // 200MB max file size
+      maxFileSize: 100 * 1024 * 1024, // 100MB max file size per question
       keepExtensions: true,
     });
 
@@ -24,15 +24,19 @@ export default async function uploadHandler(req, res) {
 
     // Get uploaded file
     const videoFile = files.video[0];
-    const participantName = fields.participantName[0];
+    const firstName = fields.firstName[0];
+    const lastName = fields.lastName[0];
     const passcode = fields.passcode[0];
+    const questionNumber = fields.questionNumber[0];
     const timestamp = fields.timestamp[0];
 
     console.log('Received upload:', {
       filename: videoFile.originalFilename,
       size: videoFile.size,
-      participantName,
+      firstName,
+      lastName,
       passcode,
+      questionNumber,
       timestamp
     });
 
@@ -51,10 +55,47 @@ export default async function uploadHandler(req, res) {
 
     const drive = google.drive({ version: 'v3', auth });
 
-    // Upload to Google Drive
+    // Create or get participant folder: "FirstName_LastName_Passcode"
+    const folderName = `${firstName}_${lastName}_${passcode}`;
+    let participantFolderId;
+
+    // Search for existing folder
+    const folderQuery = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and '${process.env.GOOGLE_DRIVE_FOLDER_ID}' in parents and trashed=false`;
+    
+    const folderSearch = await drive.files.list({
+      q: folderQuery,
+      fields: 'files(id, name)',
+      spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
+    });
+
+    if (folderSearch.data.files.length > 0) {
+      // Folder exists, use it
+      participantFolderId = folderSearch.data.files[0].id;
+      console.log('Using existing folder:', folderName);
+    } else {
+      // Create new folder
+      const folderMetadata = {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [process.env.GOOGLE_DRIVE_FOLDER_ID]
+      };
+
+      const folder = await drive.files.create({
+        requestBody: folderMetadata,
+        fields: 'id',
+        supportsAllDrives: true
+      });
+
+      participantFolderId = folder.data.id;
+      console.log('Created new folder:', folderName);
+    }
+
+    // Upload video to participant's folder
     const fileMetadata = {
       name: videoFile.originalFilename,
-      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
+      parents: [participantFolderId],
     };
 
     const media = {
@@ -80,9 +121,8 @@ export default async function uploadHandler(req, res) {
       fileId: file.data.id,
       fileName: file.data.name,
       webViewLink: file.data.webViewLink,
-      participantName,
-      passcode,
-      timestamp,
+      folderName: folderName,
+      questionNumber: questionNumber,
     });
 
   } catch (error) {
@@ -93,3 +133,21 @@ export default async function uploadHandler(req, res) {
     });
   }
 }
+```
+
+## What this does:
+
+1. **Creates a folder named:** `FirstName_LastName_Passcode` (e.g., `Kevin_Thakkar_1089100823457`)
+2. **Searches for existing folder** - if it exists, uses it (so all 5 questions go in same folder)
+3. **Uploads each question recording** to that person's folder
+4. **Each file is named:** `Question_1_timestamp.webm`, `Question_2_timestamp.webm`, etc.
+
+## Result in Google Drive:
+```
+📁 Language Proficiency Screenings/
+  📁 Kevin_Thakkar_1089100823457/
+    🎥 Question_1_2025-10-23T01:20:00.webm
+    🎥 Question_2_2025-10-23T01:22:30.webm
+    🎥 Question_3_2025-10-23T01:25:00.webm
+    🎥 Question_4_2025-10-23T01:27:30.webm
+    🎥 Question_5_2025-10-23T01:30:00.webm
