@@ -9,7 +9,7 @@ const repeatCounts = {
 
 // Current page tracker
 let currentPage = 1;
-let isChangingPage = false; // ADD THIS - prevents double clicks
+let isChangingPage = false; // Prevents double clicks
 
 // Preview stream for equipment test
 let previewStream = null;
@@ -88,6 +88,12 @@ async function goToPage(pageNumber) {
 }
 
 async function stopAndUploadQuestion(questionNum) {
+    // Show upload indicator
+    const uploadIndicator = document.getElementById('uploadIndicator');
+    const uploadText = document.getElementById('uploadText');
+    uploadIndicator.classList.add('active');
+    uploadText.textContent = `Uploading Question ${questionNum}...`;
+    
     try {
         console.log(`Stopping and uploading question ${questionNum}...`);
         
@@ -97,10 +103,19 @@ async function stopAndUploadQuestion(questionNum) {
         // Upload immediately
         await window.recordingManager.uploadQuestionRecording(blob);
         
+        // Show success briefly
+        uploadText.textContent = `Question ${questionNum} uploaded! ✓`;
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
         console.log(`Question ${questionNum} uploaded successfully!`);
     } catch (error) {
         console.error(`Error uploading question ${questionNum}:`, error);
+        uploadText.textContent = `Upload failed ✗`;
+        await new Promise(resolve => setTimeout(resolve, 1500));
         alert(`Warning: Question ${questionNum} upload failed. Please contact support.`);
+    } finally {
+        // Hide indicator
+        uploadIndicator.classList.remove('active');
     }
 }
 
@@ -346,7 +361,7 @@ window.addEventListener('beforeunload', function() {
     
     // Stop preview if active
     if (previewStream) {
-        previewStream.getTracks().forEach(track => track.stop());
+        previewStream.getTracks().forEach(track => track.stop();
     }
     
     if (window.recordingManager) {
