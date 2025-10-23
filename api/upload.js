@@ -2,14 +2,7 @@ import { google } from 'googleapis';
 import formidable from 'formidable';
 import fs from 'fs';
 
-// Disable body parsing, we'll use formidable
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-export default async function handler(req, res) {
+export default async function uploadHandler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -18,7 +11,7 @@ export default async function handler(req, res) {
   try {
     // Parse the multipart form data
     const form = formidable({
-      maxFileSize: 500 * 1024 * 1024, // 500MB max file size
+      maxFileSize: 200 * 1024 * 1024, // 200MB max file size
       keepExtensions: true,
     });
 
