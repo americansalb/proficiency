@@ -29,6 +29,12 @@ function stopAllVideos() {
 async function goToPage(pageNumber) {
     const previousPage = currentPage;
     
+    // If leaving a question page (5-9), stop and upload that question FIRST
+    if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
+        const questionNum = previousPage - 4;
+        await stopAndUploadQuestion(questionNum);
+    }
+    
     // Stop all videos before changing pages
     stopAllVideos();
     
@@ -52,16 +58,10 @@ async function goToPage(pageNumber) {
             }, 500);
         }
         
-        // Start recording for this question
+        // Start recording for this NEW question
         if (window.recordingManager) {
             window.recordingManager.startQuestionRecording(questionNum);
         }
-    }
-    
-    // If leaving a question page (5-9), stop and upload that question
-    if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
-        const questionNum = previousPage - 4;
-        await stopAndUploadQuestion(questionNum);
     }
     
     // Scroll to top
