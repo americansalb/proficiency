@@ -64,45 +64,42 @@ async function goToPage(pageNumber) {
         document.getElementById('page' + pageNumber).classList.add('active');
         currentPage = pageNumber;
         
-        // Auto-play video if it's a question page (5-9)
-        if (pageNumber >= 5 && pageNumber <= 9) {
-            const questionNum = pageNumber - 4;
-            const video = document.getElementById('video' + questionNum);
-            
-            if (video) {
-                // Auto-play after a short delay
-                setTimeout(() => {
-                    video.currentTime = 0;
-                    video.play().catch(err => {
-                        console.log('Video autoplay prevented:', err);
-                        // User may need to interact first
-                    });
-                }, 500);
-            }
-            
-            // Start recording for this NEW question
-            if (window.recordingManager) {
-                setTimeout(() => {
-                    window.recordingManager.startQuestionRecording(questionNum);
-                }, 100);
-            }
-        }
+        // Scroll to top
+        window.scrollTo(0, 0);
         
         // Auto-play instructions video on page 2
         if (pageNumber === 2) {
-            const videoInstructions = document.getElementById('videoInstructions');
-            if (videoInstructions) {
-                setTimeout(() => {
+            setTimeout(() => {
+                const videoInstructions = document.getElementById('videoInstructions');
+                if (videoInstructions) {
                     videoInstructions.currentTime = 0;
                     videoInstructions.play().catch(err => {
                         console.log('Instructions video autoplay prevented:', err);
                     });
-                }, 500);
-            }
+                }
+            }, 300);
         }
         
-        // Scroll to top
-        window.scrollTo(0, 0);
+        // Auto-play video if it's a question page (5-9)
+        if (pageNumber >= 5 && pageNumber <= 9) {
+            const questionNum = pageNumber - 4;
+            
+            // Start recording for this NEW question
+            if (window.recordingManager) {
+                window.recordingManager.startQuestionRecording(questionNum);
+            }
+            
+            // Play the video
+            setTimeout(() => {
+                const video = document.getElementById('video' + questionNum);
+                if (video) {
+                    video.currentTime = 0;
+                    video.play().catch(err => {
+                        console.log('Video autoplay prevented:', err);
+                    });
+                }
+            }, 300);
+        }
     } finally {
         setTimeout(() => {
             isChangingPage = false;
