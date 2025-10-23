@@ -25,15 +25,7 @@ function stopAllVideos() {
             video.currentTime = 0;
         }
     }
-    
-    // Stop all iframes by clearing src temporarily
-    const iframes = document.querySelectorAll('.video-container iframe');
-    iframes.forEach(iframe => {
-        if (iframe.src) {
-            iframe.dataset.originalSrc = iframe.src;
-            iframe.src = '';
-        }
-    });
+    // Note: We don't stop iframes - they'll just keep playing
 }
 
 async function goToPage(pageNumber) {
@@ -66,11 +58,10 @@ async function goToPage(pageNumber) {
         document.getElementById('page' + pageNumber).classList.add('active');
         currentPage = pageNumber;
         
-        // Auto-play video if it's a question page (5-9) or instructions page (2)
+        // Auto-play video if it's a question page (5-9)
         if (pageNumber >= 5 && pageNumber <= 9) {
             const questionNum = pageNumber - 4;
             const video = document.getElementById('video' + questionNum);
-            const iframe = document.querySelector(`#page${pageNumber} iframe`);
             
             if (video) {
                 // HTML5 video - auto-play
@@ -78,35 +69,13 @@ async function goToPage(pageNumber) {
                     video.currentTime = 0;
                     video.play();
                 }, 500);
-            } else if (iframe) {
-                // Google Drive iframe - restore src with autoplay to start video
-                if (iframe.dataset.originalSrc) {
-                    let src = iframe.dataset.originalSrc;
-                    if (!src.includes('autoplay=1')) {
-                        src += (src.includes('?') ? '&' : '?') + 'autoplay=1';
-                    }
-                    setTimeout(() => {
-                        iframe.src = src;
-                    }, 100);
-                }
             }
+            // Google Drive iframes will autoplay automatically with ?autoplay=1 parameter
             
             // Start recording for this NEW question
             if (window.recordingManager) {
                 setTimeout(() => {
                     window.recordingManager.startQuestionRecording(questionNum);
-                }, 100);
-            }
-        } else if (pageNumber === 2) {
-            // Instructions page - autoplay iframe
-            const iframe = document.querySelector('#page2 iframe');
-            if (iframe && iframe.dataset.originalSrc) {
-                let src = iframe.dataset.originalSrc;
-                if (!src.includes('autoplay=1')) {
-                    src += (src.includes('?') ? '&' : '?') + 'autoplay=1';
-                }
-                setTimeout(() => {
-                    iframe.src = src;
                 }, 100);
             }
         }
@@ -344,15 +313,8 @@ function repeatVideo(questionNumber) {
             video.play();
         } else if (iframe) {
             // Google Drive iframe - reload it with autoplay to restart
-            let currentSrc = iframe.src;
-            // Make sure autoplay=1 is in the URL
-            if (!currentSrc.includes('autoplay=1')) {
-                currentSrc += (currentSrc.includes('?') ? '&' : '?') + 'autoplay=1';
-            }
-            iframe.src = '';
-            setTimeout(() => {
-                iframe.src = currentSrc;
-            }, 100);
+            const currentSrc = iframe.src;
+            iframe.src = currentSrc + '&t=' + Date.now(); // Add timestamp to force reload
         }
         
         // Disable button if no repeats left
