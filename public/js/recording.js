@@ -53,11 +53,11 @@ class RecordingManager {
         this.recordedChunks = [];
 
         try {
-            // ULTRA COMPRESSED VIDEO (potato quality for fast upload)
+            // Low quality video, high quality audio for transcription
             const videoOptions = {
                 mimeType: 'video/webm;codecs=vp8,opus',
-                videoBitsPerSecond: 100000,  // 100 kbps - potato quality
-                audioBitsPerSecond: 96000    // 96 kbps - decent audio
+                videoBitsPerSecond: 100000,  // 100 kbps - potato quality video
+                audioBitsPerSecond: 192000   // 192 kbps - high quality audio for AI transcription
             };
 
             if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) {

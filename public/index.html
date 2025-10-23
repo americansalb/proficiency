@@ -222,6 +222,43 @@
             text-align: center;
         }
 
+        .timer-container {
+            background: #14FFEC;
+            color: #0d7377;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 48px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .timer-container.warning {
+            background: #f39c12;
+            color: white;
+            animation: timerPulse 1s infinite;
+        }
+
+        .timer-container.danger {
+            background: #e74c3c;
+            color: white;
+            animation: timerPulse 0.5s infinite;
+        }
+
+        @keyframes timerPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .timer-label {
+            font-size: 14px;
+            font-weight: normal;
+            display: block;
+            margin-bottom: 10px;
+        }
+
         .repeat-button {
             background: #14FFEC;
             color: #0d7377;
@@ -540,6 +577,11 @@
                 <h2 style="color: white; margin: 0;">Question 1 of 5</h2>
             </div>
 
+            <div class="timer-container" id="timer1">
+                <span class="timer-label">Time Remaining</span>
+                <span id="timerDisplay1">5:00</span>
+            </div>
+
             <div class="video-container">
                 <video id="video1" disablePictureInPicture>
                     <source src="https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q1_ENG_tk3fkm.mp4" type="video/mp4">
@@ -562,6 +604,11 @@
         <div class="page" id="page6">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 2 of 5</h2>
+            </div>
+
+            <div class="timer-container" id="timer2">
+                <span class="timer-label">Time Remaining</span>
+                <span id="timerDisplay2">5:00</span>
             </div>
 
             <div class="video-container">
@@ -588,6 +635,11 @@
                 <h2 style="color: white; margin: 0;">Question 3 of 5</h2>
             </div>
 
+            <div class="timer-container" id="timer3">
+                <span class="timer-label">Time Remaining</span>
+                <span id="timerDisplay3">5:00</span>
+            </div>
+
             <div class="video-container">
                 <video id="video3" disablePictureInPicture>
                     <source src="https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234753/PROF_ENG_Q3_hv0vo8.mp4" type="video/mp4">
@@ -612,6 +664,11 @@
                 <h2 style="color: white; margin: 0;">Question 4 of 5</h2>
             </div>
 
+            <div class="timer-container" id="timer4">
+                <span class="timer-label">Time Remaining</span>
+                <span id="timerDisplay4">5:00</span>
+            </div>
+
             <div class="video-container">
                 <video id="video4" disablePictureInPicture>
                     <source src="https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234803/PROF_ENG_Q4_hvcuft.mp4" type="video/mp4">
@@ -634,6 +691,11 @@
         <div class="page" id="page9">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 5 of 5</h2>
+            </div>
+
+            <div class="timer-container" id="timer5">
+                <span class="timer-label">Time Remaining</span>
+                <span id="timerDisplay5">5:00</span>
             </div>
 
             <div class="video-container">

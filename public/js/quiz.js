@@ -11,10 +11,76 @@ const repeatCounts = {
 let currentPage = 1;
 let isChangingPage = false; // Prevent double-clicks
 
+// Timer variables
+let timerInterval = null;
+let timeRemaining = 300; // 5 minutes in seconds
+
 // Preview stream for equipment test
 let previewStream = null;
 let audioContext = null;
 let audioAnalyser = null;
+
+function startTimer(questionNumber) {
+    // Clear any existing timer
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+
+    // Reset to 5 minutes
+    timeRemaining = 300;
+
+    const timerDisplay = document.getElementById('timerDisplay' + questionNumber);
+    const timerContainer = document.getElementById('timer' + questionNumber);
+
+    // Update display
+    updateTimerDisplay(timerDisplay, timerContainer);
+
+    // Start countdown
+    timerInterval = setInterval(() => {
+        timeRemaining--;
+
+        updateTimerDisplay(timerDisplay, timerContainer);
+
+        // Time's up - auto advance
+        if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+
+            // Auto-advance to next question or complete test
+            if (questionNumber < 5) {
+                goToPage(questionNumber + 5); // Next question page
+            } else {
+                completeTest(); // Last question, complete test
+            }
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay(timerDisplay, timerContainer) {
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    timerDisplay.textContent = formattedTime;
+
+    // Remove all warning classes first
+    timerContainer.classList.remove('warning', 'danger');
+
+    // Add warning when under 2 minutes
+    if (timeRemaining <= 120 && timeRemaining > 60) {
+        timerContainer.classList.add('warning');
+    }
+    // Add danger when under 1 minute
+    else if (timeRemaining <= 60) {
+        timerContainer.classList.add('danger');
+    }
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
 
 function stopAllVideos() {
     // Stop instructions video
@@ -46,9 +112,13 @@ async function goToPage(pageNumber) {
     try {
         const previousPage = currentPage;
 
-        // If leaving a question page, stop and upload in background (non-blocking)
+        // If leaving a question page, stop timer and upload in background (non-blocking)
         if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
             const questionNum = previousPage - 4;
+
+            // Stop timer
+            stopTimer();
+
             if (window.recordingManager) {
                 try {
                     const blob = await window.recordingManager.stopQuestionRecording();
@@ -93,6 +163,9 @@ async function goToPage(pageNumber) {
         // Auto-play video if it's a question page (5-9)
         if (pageNumber >= 5 && pageNumber <= 9) {
             const questionNum = pageNumber - 4;
+
+            // Start timer for this question
+            startTimer(questionNum);
 
             // Start recording this question
             if (window.recordingManager) {
@@ -336,7 +409,8 @@ async function completeTest() {
     isChangingPage = true;
 
     try {
-        // Stop all videos
+        // Stop timer and all videos
+        stopTimer();
         stopAllVideos();
 
         // Show upload page
