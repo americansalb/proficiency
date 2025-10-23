@@ -19,6 +19,19 @@ export default async function validatePasscodeHandler(req, res) {
     // Clean the passcode (remove spaces/dashes)
     const cleanedPasscode = passcode.replace(/[\s-]/g, '');
 
+    // Check if required environment variables are set
+    if (!process.env.GOOGLE_SHEET_ID) {
+      console.error('GOOGLE_SHEET_ID environment variable is not set');
+      return res.status(500).json({
+        valid: false,
+        error: 'Google Sheet configuration missing. Please add GOOGLE_SHEET_ID to environment variables.'
+      });
+    }
+
+    console.log('Validating passcode:', cleanedPasscode);
+    console.log('Google Sheet ID:', process.env.GOOGLE_SHEET_ID);
+    console.log('Sheet Range:', process.env.GOOGLE_SHEET_RANGE || 'Sheet1!A:A');
+
     // Authenticate with Google Sheets API
     const auth = new google.auth.GoogleAuth({
       credentials: {
@@ -66,10 +79,25 @@ export default async function validatePasscodeHandler(req, res) {
 
   } catch (error) {
     console.error('Error validating passcode:', error);
+    console.error('Error stack:', error.stack);
+
+    let errorMessage = 'Failed to validate passcode';
+
+    // Provide more specific error messages
+    if (error.message.includes('Unable to parse range')) {
+      errorMessage = 'Invalid GOOGLE_SHEET_RANGE format. Use format: Sheet1!A:A';
+    } else if (error.message.includes('Requested entity was not found')) {
+      errorMessage = 'Google Sheet not found. Check GOOGLE_SHEET_ID or make sure sheet is shared with service account.';
+    } else if (error.message.includes('The caller does not have permission')) {
+      errorMessage = 'Service account does not have access to Google Sheet. Make sure you shared the sheet with: ' + process.env.GOOGLE_CLIENT_EMAIL;
+    }
+
     return res.status(500).json({
       valid: false,
-      error: 'Failed to validate passcode',
-      details: error.message
+      error: errorMessage,
+      details: error.message,
+      sheetId: process.env.GOOGLE_SHEET_ID,
+      range: process.env.GOOGLE_SHEET_RANGE || 'Sheet1!A:A'
     });
   }
 }
