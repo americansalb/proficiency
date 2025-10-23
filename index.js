@@ -4,6 +4,7 @@ import { dirname, join } from 'path';
 import uploadHandler from './api/upload.js';
 import combineHandler from './api/combine.js';
 import checkCompletionHandler from './api/check-completion.js';
+import validatePasscodeHandler from './api/validate-passcode.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,6 +22,7 @@ app.use(express.static(join(__dirname, 'public')));
 app.post('/api/upload', uploadHandler);
 app.post('/api/combine', combineHandler);
 app.post('/api/check-completion', checkCompletionHandler);
+app.post('/api/validate-passcode', validatePasscodeHandler);
 
 // Start server
 app.listen(PORT, () => {

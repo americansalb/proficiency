@@ -208,19 +208,21 @@ async function goToPage(pageNumber) {
     }
 }
 
-function validatePasscode(passcode) {
-    // Remove any spaces or dashes
-    const cleaned = passcode.replace(/[\s-]/g, '');
+async function validatePasscode(passcode) {
+    // Call API to check if passcode is in Google Sheet
+    try {
+        const response = await fetch('/api/validate-passcode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passcode: passcode })
+        });
 
-    // Check if it's a number
-    if (!/^\d+$/.test(cleaned)) {
+        const data = await response.json();
+        return data.valid;
+    } catch (error) {
+        console.error('Error validating passcode:', error);
         return false;
     }
-
-    const num = parseInt(cleaned);
-
-    // Check if it's in the valid range
-    return num >= 1089100800000 && num <= 1089100899999;
 }
 
 async function validateAndSelectTest() {
@@ -233,8 +235,9 @@ async function validateAndSelectTest() {
     const lastName = document.getElementById('lastName').value.trim();
     const errorMsg = document.getElementById('passcodeError');
 
-    // Validate passcode
-    if (!validatePasscode(passcode)) {
+    // Validate passcode (now async)
+    const isValidPasscode = await validatePasscode(passcode);
+    if (!isValidPasscode) {
         errorMsg.style.display = 'block';
         errorMsg.textContent = 'Invalid passcode. Please enter a valid passcode.';
         return;
