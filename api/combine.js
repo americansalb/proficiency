@@ -7,12 +7,13 @@ export default async function combineHandler(req, res) {
   }
 
   try {
-    const { firstName, lastName, passcode } = req.body;
+    const { firstName, lastName, passcode, testType } = req.body;
 
     console.log('Video combination requested:', {
       firstName,
       lastName,
-      passcode
+      passcode,
+      testType
     });
 
     // Authenticate with Google Drive
@@ -33,8 +34,8 @@ export default async function combineHandler(req, res) {
     // Get folder ID from environment
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-    // Search for all 5 question videos for this participant
-    const searchQuery = `'${folderId}' in parents and name contains '${lastName}' and name contains '${passcode}' and mimeType='video/webm'`;
+    // Search for all 5 question videos for this participant and test type
+    const searchQuery = `'${folderId}' in parents and name contains '${lastName}' and name contains '${passcode}' and name contains '${testType}' and mimeType='video/webm'`;
 
     const response = await drive.files.list({
       q: searchQuery,
@@ -60,6 +61,7 @@ export default async function combineHandler(req, res) {
     const metadataContent = {
       participant: `${firstName} ${lastName}`,
       passcode: passcode,
+      testType: testType,
       timestamp: new Date().toISOString(),
       videos: files.map(f => ({
         id: f.id,
@@ -73,7 +75,7 @@ export default async function combineHandler(req, res) {
 
     const metadataFile = await drive.files.create({
       requestBody: {
-        name: `${lastName}_${passcode}_COMBINE_METADATA.json`,
+        name: `${lastName}_${passcode}_${testType}_COMBINE_METADATA.json`,
         parents: [folderId],
         mimeType: 'application/json',
       },

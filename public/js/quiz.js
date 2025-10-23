@@ -116,8 +116,8 @@ async function goToPage(pageNumber) {
         const previousPage = currentPage;
 
         // If leaving a question page, stop timer and upload in background (non-blocking)
-        if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
-            const questionNum = previousPage - 4;
+        if (previousPage >= 6 && previousPage <= 10 && pageNumber !== previousPage) {
+            const questionNum = previousPage - 5;
 
             // Stop timer
             stopTimer();
@@ -153,7 +153,9 @@ async function goToPage(pageNumber) {
         // Auto-play instructions video on page 2
         if (pageNumber === 2) {
             setTimeout(() => {
-                const videoInstructions = document.getElementById('videoInstructions');
+                const testType = window.testCredentials?.testType || 'ENGLISH';
+                const videoId = testType === 'ENGLISH' ? 'videoInstructionsEnglish' : 'videoInstructionsNonEnglish';
+                const videoInstructions = document.getElementById(videoId);
                 if (videoInstructions) {
                     videoInstructions.currentTime = 0;
                     videoInstructions.play().catch(err => {
@@ -163,9 +165,16 @@ async function goToPage(pageNumber) {
             }, 300);
         }
 
-        // Auto-play video if it's a question page (5-9)
-        if (pageNumber >= 5 && pageNumber <= 9) {
-            const questionNum = pageNumber - 4;
+        // Setup equipment test on page 5
+        if (pageNumber === 5) {
+            setTimeout(() => {
+                setupEquipmentTest();
+            }, 500);
+        }
+
+        // Auto-play video if it's a question page (6-10)
+        if (pageNumber >= 6 && pageNumber <= 10) {
+            const questionNum = pageNumber - 5;
 
             // Start timer for this question
             startTimer(questionNum);
@@ -208,7 +217,7 @@ function validatePasscode(passcode) {
     return num >= 1089100800000 && num <= 1089100899999;
 }
 
-async function validateAndTestEquipment() {
+async function validateAndSelectTest() {
     const passcode = document.getElementById('passcodeInput').value;
     const check1 = document.getElementById('check1').checked;
     const check2 = document.getElementById('check2').checked;
@@ -249,13 +258,130 @@ async function validateAndTestEquipment() {
         passcode: passcode
     };
 
-    // Go to equipment test page
+    // Go to test selection page
     goToPage(4);
 
-    // Start equipment test
+    // Check which tests have been completed
     setTimeout(() => {
-        setupEquipmentTest();
+        checkTestCompletion();
     }, 500);
+}
+
+async function checkTestCompletion() {
+    const loadingDiv = document.getElementById('loadingTests');
+    const selectionDiv = document.getElementById('testSelection');
+    const englishCard = document.getElementById('englishTestCard');
+    const nonEnglishCard = document.getElementById('nonEnglishTestCard');
+    const englishStatus = document.getElementById('englishStatus');
+    const nonEnglishStatus = document.getElementById('nonEnglishStatus');
+
+    try {
+        loadingDiv.style.display = 'block';
+        selectionDiv.style.display = 'none';
+
+        // Call API to check completion
+        const response = await fetch('/api/check-completion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passcode: window.testCredentials.passcode })
+        });
+
+        const data = await response.json();
+
+        // Update UI based on completion status
+        if (data.completed.english) {
+            englishCard.classList.add('disabled');
+            englishCard.onclick = null;
+            englishStatus.className = 'test-card-status completed';
+            englishStatus.textContent = '✅ Already Completed';
+        } else {
+            englishStatus.className = 'test-card-status available';
+            englishStatus.textContent = 'Click to Begin';
+        }
+
+        if (data.completed.nonEnglish) {
+            nonEnglishCard.classList.add('disabled');
+            nonEnglishCard.onclick = null;
+            nonEnglishStatus.className = 'test-card-status completed';
+            nonEnglishStatus.textContent = '✅ Already Completed';
+        } else {
+            nonEnglishStatus.className = 'test-card-status available';
+            nonEnglishStatus.textContent = 'Click to Begin';
+        }
+
+        // Show selection
+        loadingDiv.style.display = 'none';
+        selectionDiv.style.display = 'block';
+
+    } catch (error) {
+        console.error('Error checking completion:', error);
+        // If error, just show both tests as available
+        loadingDiv.style.display = 'none';
+        selectionDiv.style.display = 'block';
+    }
+}
+
+function selectTest(testType) {
+    // Check if card is disabled
+    const card = testType === 'ENGLISH' ? document.getElementById('englishTestCard') : document.getElementById('nonEnglishTestCard');
+    if (card.classList.contains('disabled')) {
+        alert('You have already completed this test. Please select the other test or contact support.');
+        return;
+    }
+
+    // Store selected test type
+    window.testCredentials.testType = testType;
+
+    // Load appropriate instructions
+    const englishInstr = document.getElementById('englishInstructions');
+    const nonEnglishInstr = document.getElementById('nonEnglishInstructions');
+
+    if (testType === 'ENGLISH') {
+        englishInstr.style.display = 'block';
+        nonEnglishInstr.style.display = 'none';
+    } else {
+        englishInstr.style.display = 'none';
+        nonEnglishInstr.style.display = 'block';
+    }
+
+    // Load question videos dynamically
+    loadQuestionVideos(testType);
+
+    // Go to instructions page
+    goToPage(2);
+}
+
+function loadQuestionVideos(testType) {
+    const videos = {
+        'ENGLISH': {
+            Q1: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q1_ENG_tk3fkm.mp4',
+            Q2: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200966/Q2_ENG_uyghxi.mp4',
+            Q3: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q3_ENG_u7iytb.mp4',
+            Q4: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q4_ENG_qjh7nj.mp4',
+            Q5: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q5_ENG_hmxjgr.mp4'
+        },
+        'NONENG': {
+            Q1: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239799/PROF_NONENG_Q1_ggc672.mp4',
+            Q2: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239798/PROF_NONENG_Q2_czmbue.mp4',
+            Q3: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239798/PROF_NONENG_Q3_r4rdtx.mp4',
+            Q4: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239799/PROF_NONENG_Q4_yjaueu.mp4',
+            Q5: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239798/PROF_NONENG_Q5_egz5j7.mp4'
+        }
+    };
+
+    const selectedVideos = videos[testType];
+
+    // Update video sources
+    for (let i = 1; i <= 5; i++) {
+        const video = document.getElementById('video' + i);
+        if (video) {
+            const source = video.querySelector('source');
+            if (source) {
+                source.src = selectedVideos['Q' + i];
+                video.load(); // Reload video with new source
+            }
+        }
+    }
 }
 
 async function setupEquipmentTest() {
@@ -395,9 +521,10 @@ function repeatVideo(questionNumber) {
     }
 }
 
-function repeatInstructions() {
+function repeatInstructions(testType) {
     // Restart instructions video (no limit on repeats)
-    const videoInstructions = document.getElementById('videoInstructions');
+    const videoId = testType === 'ENGLISH' ? 'videoInstructionsEnglish' : 'videoInstructionsNonEnglish';
+    const videoInstructions = document.getElementById(videoId);
     if (videoInstructions) {
         videoInstructions.currentTime = 0;
         videoInstructions.play().catch(err => {
@@ -417,9 +544,9 @@ async function completeTest() {
         stopAllVideos();
 
         // Show upload page
-        currentPage = 10;
+        currentPage = 11;
         document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-        document.getElementById('page10').classList.add('active');
+        document.getElementById('page11').classList.add('active');
         document.getElementById('uploadSpinner').style.display = 'block';
         document.getElementById('uploadMessage').textContent = 'Finalizing uploads...';
 
@@ -445,7 +572,8 @@ async function completeTest() {
                     body: JSON.stringify({
                         firstName: window.testCredentials.firstName,
                         lastName: window.testCredentials.lastName,
-                        passcode: window.testCredentials.passcode
+                        passcode: window.testCredentials.passcode,
+                        testType: window.testCredentials.testType
                     })
                 });
 
@@ -470,9 +598,9 @@ async function completeTest() {
             if (window.recordingManager) {
                 window.recordingManager.stopAllRecording();
             }
-            currentPage = 11;
+            currentPage = 12;
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            document.getElementById('page11').classList.add('active');
+            document.getElementById('page12').classList.add('active');
         }, 2000);
 
     } catch (error) {

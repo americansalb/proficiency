@@ -113,6 +113,7 @@ class RecordingManager {
 
     async uploadQuestionRecording(blob, questionNumber) {
         const timestamp = new Date().toISOString();
+        const testType = window.testCredentials?.testType || 'ENGLISH';
         const filename = `Question_${questionNumber}_${timestamp}.webm`;
 
         const formData = new FormData();
@@ -122,6 +123,7 @@ class RecordingManager {
         formData.append('passcode', this.participantInfo.passcode);
         formData.append('questionNumber', questionNumber);
         formData.append('timestamp', timestamp);
+        formData.append('testType', testType);
 
         const uploadPromise = fetch('/api/upload', {
             method: 'POST',

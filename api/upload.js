@@ -29,6 +29,7 @@ export default async function uploadHandler(req, res) {
     const passcode = fields.passcode[0];
     const questionNumber = fields.questionNumber[0];
     const timestamp = fields.timestamp[0];
+    const testType = fields.testType ? fields.testType[0] : 'ENGLISH';
 
     console.log('Received upload:', {
       filename: videoFile.originalFilename,
@@ -37,7 +38,8 @@ export default async function uploadHandler(req, res) {
       lastName,
       passcode,
       questionNumber,
-      timestamp
+      timestamp,
+      testType
     });
 
     // Authenticate with Google Drive
@@ -92,9 +94,10 @@ export default async function uploadHandler(req, res) {
       console.log('Created new folder:', folderName);
     }
 
-    // Upload video to participant's folder
+    // Upload video to participant's folder with test type in filename
+    const filename = `${lastName}_${passcode}_${testType}_Q${questionNumber}.webm`;
     const fileMetadata = {
-      name: videoFile.originalFilename,
+      name: filename,
       parents: [participantFolderId],
     };
 

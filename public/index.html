@@ -429,6 +429,79 @@
             text-align: center;
             padding: 20px;
         }
+
+        /* TEST SELECTION STYLES */
+        .test-selection-container {
+            margin: 30px 0;
+        }
+
+        .test-card {
+            background: #f0f9f9;
+            border: 3px solid #0d7377;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .test-card:hover:not(.disabled) {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(13, 115, 119, 0.3);
+            border-color: #0a5a5d;
+        }
+
+        .test-card.disabled {
+            background: #f8f9fa;
+            border-color: #dee2e6;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .test-card-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0d7377;
+            margin-bottom: 10px;
+        }
+
+        .test-card.disabled .test-card-title {
+            color: #6c757d;
+        }
+
+        .test-card-description {
+            color: #555;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .test-card-status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .test-card-status.completed {
+            background: #d4edda;
+            color: #27ae60;
+        }
+
+        .test-card-status.available {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .loading-message {
+            text-align: center;
+            color: #0d7377;
+            font-size: 18px;
+            padding: 40px;
+        }
     </style>
 </head>
 <body>
@@ -446,9 +519,9 @@
     <div class="container">
         <!-- Page 1: Welcome -->
         <div class="page active" id="page1">
-            <h1>Welcome to the English Proficiency Screening</h1>
+            <h1>Welcome to the AALB Proficiency Screening</h1>
             <p class="center" style="margin: 40px 0;">
-                This screening will assess your English listening and speaking abilities through a series of questions.
+                This screening will assess your language proficiency through a series of recorded questions.
             </p>
             <div class="camera-permission">
                 <h3>⚠️ Camera & Microphone Required</h3>
@@ -460,42 +533,74 @@
                 </ul>
             </div>
             <div class="center">
-                <button class="button" onclick="goToPage(2)">View Instructions</button>
+                <button class="button" onclick="goToPage(3)">Get Started</button>
             </div>
         </div>
 
-        <!-- Page 2: Instructions -->
+        <!-- Page 2: Instructions (Dynamic) -->
         <div class="page" id="page2">
-            <h1>English Proficiency Test Instructions</h1>
+            <!-- English Instructions -->
+            <div id="englishInstructions" style="display: none;">
+                <h1>English Proficiency Test Instructions</h1>
 
-            <div class="video-container">
-                <video id="videoInstructions" disablePictureInPicture>
-                    <source src="https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Instructions_ENG_khs3u4.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <div class="video-container">
+                    <video id="videoInstructionsEnglish" disablePictureInPicture>
+                        <source src="https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Instructions_ENG_khs3u4.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+
+                <div class="instructions-box">
+                    <ol>
+                        <li>You will listen carefully to questions you're asked in English, and you will respond to them, also in English.</li>
+                        <li>There are no right or wrong answers, rather, we're testing to see your ability to listen and speak in the English language.</li>
+                        <li>Please provide complete responses.</li>
+                        <li>You may repeat each question up to two times before responding.</li>
+                    </ol>
+                </div>
+
+                <div class="center">
+                    <button class="repeat-button" onclick="repeatInstructions('ENGLISH')">
+                        🔄 Repeat Instructions Video
+                    </button>
+                </div>
             </div>
 
-            <div class="instructions-box">
-                <ol>
-                    <li>You will listen carefully to questions you're asked in English, and you will respond to them, also in English.</li>
-                    <li>There are no right or wrong answers, rather, we're testing to see your ability to listen and speak in the English language.</li>
-                    <li>Please provide complete responses.</li>
-                    <li>You may repeat each question up to two times before responding.</li>
-                </ol>
-            </div>
+            <!-- Non-English Instructions -->
+            <div id="nonEnglishInstructions" style="display: none;">
+                <h1>Non-English Proficiency Test Instructions</h1>
 
-            <div class="center">
-                <button class="repeat-button" onclick="repeatInstructions()">
-                    🔄 Repeat Instructions Video
-                </button>
+                <div class="video-container">
+                    <video id="videoInstructionsNonEnglish" disablePictureInPicture>
+                        <source src="https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239800/Non-English_Screening_Instructions_fznrwj.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+
+                <div class="instructions-box">
+                    <ol>
+                        <li>You will listen carefully to questions you're asked in <strong>English</strong>, and you will respond to them, but <strong>not in English!</strong></li>
+                        <li>Rather, you will respond in <strong>your chosen non-English language</strong> (Spanish, French, Arabic, etc.).</li>
+                        <li>There are no right or wrong answers, rather, we're testing to see your ability to speak in your chosen language.</li>
+                        <li>Please provide complete responses.</li>
+                        <li>If you are fluent in multiple non-English languages, pick one for the purposes of the test. Your certificate will qualify for all languages you're fluent in, regardless of the one you chose for this test.</li>
+                        <li>You may repeat each question up to two times before responding.</li>
+                    </ol>
+                </div>
+
+                <div class="center">
+                    <button class="repeat-button" onclick="repeatInstructions('NONENG')">
+                        🔄 Repeat Instructions Video
+                    </button>
+                </div>
             </div>
 
             <p style="text-align: center; font-weight: 600; margin: 30px 0;">
-                There are a total of 5 questions. Once you are ready, please click "Begin", and you will be asked for a passcode.
+                There are a total of 5 questions. Once you are ready, click below to test your camera and microphone.
             </p>
 
             <div class="center">
-                <button class="button" onclick="goToPage(3)">Begin</button>
+                <button class="button" onclick="goToPage(5)">Test Camera & Microphone</button>
             </div>
         </div>
 
@@ -545,12 +650,42 @@
     placeholder="Last Name">
 
             <div class="center">
-                <button class="button" id="beginBtn" onclick="validateAndTestEquipment()">Test Camera & Microphone</button>
+                <button class="button" id="beginBtn" onclick="validateAndSelectTest()">Continue</button>
             </div>
         </div>
 
-        <!-- Page 4: NEW - Camera/Mic Test Page -->
+        <!-- Page 4: Test Selection -->
         <div class="page" id="page4">
+            <h1>Select Your Proficiency Test</h1>
+
+            <div id="loadingTests" class="loading-message">
+                <div class="loading-spinner" style="display: block;"></div>
+                <p>Checking your progress...</p>
+            </div>
+
+            <div id="testSelection" class="test-selection-container" style="display: none;">
+
+                <div class="test-card" id="englishTestCard" onclick="selectTest('ENGLISH')">
+                    <div class="test-card-title">English Proficiency Screening</div>
+                    <div class="test-card-description">
+                        Listen to questions in English and respond in English. Tests your ability to communicate effectively in the English language.
+                    </div>
+                    <div class="test-card-status available" id="englishStatus">Click to Begin</div>
+                </div>
+
+                <div class="test-card" id="nonEnglishTestCard" onclick="selectTest('NONENG')">
+                    <div class="test-card-title">Non-English Proficiency Screening</div>
+                    <div class="test-card-description">
+                        Listen to questions in English and respond in YOUR non-English language (Spanish, French, Arabic, etc.). Tests your ability to communicate in your chosen language.
+                    </div>
+                    <div class="test-card-status available" id="nonEnglishStatus">Click to Begin</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Page 5: Camera/Mic Test Page -->
+        <div class="page" id="page5">
             <h1>Test Your Equipment</h1>
 
             <p style="text-align: center; margin: 20px 0;">
@@ -573,8 +708,8 @@
             </div>
         </div>
 
-        <!-- Pages 5-9: Questions 1-5 -->
-        <div class="page" id="page5">
+        <!-- Pages 6-10: Questions 1-5 -->
+        <div class="page" id="page6">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 1 of 5</h2>
             </div>
@@ -599,11 +734,11 @@
             </div>
 
             <div class="center">
-                <button class="button" onclick="goToPage(6)">Next Question</button>
+                <button class="button" onclick="goToPage(7)">Next Question</button>
             </div>
         </div>
 
-        <div class="page" id="page6">
+        <div class="page" id="page7">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 2 of 5</h2>
             </div>
@@ -628,11 +763,11 @@
             </div>
 
             <div class="center">
-                <button class="button" onclick="goToPage(7)">Next Question</button>
+                <button class="button" onclick="goToPage(8)">Next Question</button>
             </div>
         </div>
 
-        <div class="page" id="page7">
+        <div class="page" id="page8">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 3 of 5</h2>
             </div>
@@ -657,11 +792,11 @@
             </div>
 
             <div class="center">
-                <button class="button" onclick="goToPage(8)">Next Question</button>
+                <button class="button" onclick="goToPage(9)">Next Question</button>
             </div>
         </div>
 
-        <div class="page" id="page8">
+        <div class="page" id="page9">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 4 of 5</h2>
             </div>
@@ -686,11 +821,11 @@
             </div>
 
             <div class="center">
-                <button class="button" onclick="goToPage(9)">Next Question</button>
+                <button class="button" onclick="goToPage(10)">Next Question</button>
             </div>
         </div>
 
-        <div class="page" id="page9">
+        <div class="page" id="page10">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 5 of 5</h2>
             </div>
@@ -719,8 +854,8 @@
             </div>
         </div>
 
-        <!-- Page 10: Upload Progress -->
-        <div class="page" id="page10">
+        <!-- Page 11: Upload Progress -->
+        <div class="page" id="page11">
             <h1>Uploading Your Recording</h1>
             <div class="upload-status">
                 <div class="loading-spinner" id="uploadSpinner"></div>
@@ -734,8 +869,8 @@
             </div>
         </div>
 
-        <!-- Page 11: Completion -->
-        <div class="page" id="page11">
+        <!-- Page 12: Completion -->
+        <div class="page" id="page12">
             <h1>Test Complete</h1>
             <p class="center" style="margin: 40px 0; font-size: 18px;">
                 Thank you for completing the English Proficiency Screening!
