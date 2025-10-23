@@ -29,24 +29,34 @@ export default async function checkCompletionHandler(req, res) {
     const drive = google.drive({ version: 'v3', auth });
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-    // Check for English test completion - look specifically for Q5
-    const englishQuery = `'${folderId}' in parents and name contains '${passcode}' and name contains 'ENGLISH' and name contains 'Q5' and mimeType='video/webm'`;
+    // Search for English Q5 - use full name pattern for accuracy
+    // Format: LastName_Passcode_ENGLISH_Q5.webm
+    const englishQuery = `name contains '${passcode}_ENGLISH_Q5' and mimeType='video/webm' and trashed=false`;
     const englishResponse = await drive.files.list({
       q: englishQuery,
-      fields: 'files(id, name)',
+      fields: 'files(id, name, parents)',
       spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
     });
 
-    // Check for Non-English test completion - look specifically for Q5
-    const nonEnglishQuery = `'${folderId}' in parents and name contains '${passcode}' and name contains 'NONENG' and name contains 'Q5' and mimeType='video/webm'`;
+    // Search for Non-English Q5 - use full name pattern for accuracy
+    // Format: LastName_Passcode_NONENG_Q5.webm
+    const nonEnglishQuery = `name contains '${passcode}_NONENG_Q5' and mimeType='video/webm' and trashed=false`;
     const nonEnglishResponse = await drive.files.list({
       q: nonEnglishQuery,
-      fields: 'files(id, name)',
+      fields: 'files(id, name, parents)',
       spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
     });
 
     const englishFiles = englishResponse.data.files || [];
     const nonEnglishFiles = nonEnglishResponse.data.files || [];
+
+    console.log('Completion check for passcode:', passcode);
+    console.log('English Q5 files found:', englishFiles.length, englishFiles.map(f => f.name));
+    console.log('Non-English Q5 files found:', nonEnglishFiles.length, nonEnglishFiles.map(f => f.name));
 
     // Consider test completed if Q5 exists (means they finished all questions)
     const completedTests = {
@@ -59,7 +69,9 @@ export default async function checkCompletionHandler(req, res) {
       completed: completedTests,
       details: {
         englishQ5Found: englishFiles.length,
-        nonEnglishQ5Found: nonEnglishFiles.length
+        englishQ5Files: englishFiles.map(f => f.name),
+        nonEnglishQ5Found: nonEnglishFiles.length,
+        nonEnglishQ5Files: nonEnglishFiles.map(f => f.name)
       }
     });
 

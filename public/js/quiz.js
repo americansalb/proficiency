@@ -614,6 +614,12 @@ async function completeTest() {
             if (window.recordingManager) {
                 window.recordingManager.stopAllRecording();
             }
+
+            // Set completion message based on test type
+            const testType = window.testCredentials?.testType || 'ENGLISH';
+            const testName = testType === 'ENGLISH' ? 'English Proficiency Screening' : 'Non-English Proficiency Screening';
+            document.getElementById('completionMessage').textContent = `Thank you for completing the ${testName}!`;
+
             currentPage = 12;
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
             document.getElementById('page12').classList.add('active');
@@ -627,6 +633,24 @@ async function completeTest() {
     } finally {
         isChangingPage = false;
     }
+}
+
+function returnToTestSelection() {
+    // Reset test credentials (keep passcode and name, clear test type)
+    if (window.testCredentials) {
+        delete window.testCredentials.testType;
+    }
+
+    // Reset timer
+    timeRemaining = 1500;
+
+    // Go back to test selection page
+    goToPage(4);
+
+    // Re-check completion status
+    setTimeout(() => {
+        checkTestCompletion();
+    }, 500);
 }
 
 // Allow Enter key to submit passcode
