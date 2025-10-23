@@ -17,10 +17,14 @@ let audioContext = null;
 let audioAnalyser = null;
 
 function stopAllVideos() {
-    // Instructions and Q1 use iframes - can't stop them, they'll just keep playing
-    // But they're hidden when we change pages anyway
+    // Stop instructions video
+    const videoInstructions = document.getElementById('videoInstructions');
+    if (videoInstructions) {
+        videoInstructions.pause();
+        videoInstructions.currentTime = 0;
+    }
     
-    // Stop question videos 2-5 (these are <video> tags)
+    // Stop question videos (Q1 is iframe, Q2-5 are videos)
     for (let i = 2; i <= 5; i++) {
         const video = document.getElementById('video' + i);
         if (video) {
@@ -65,7 +69,15 @@ async function goToPage(pageNumber) {
         
         // Auto-play instructions video on page 2
         if (pageNumber === 2) {
-            // Instructions uses iframe - it will autoplay automatically
+            setTimeout(() => {
+                const videoInstructions = document.getElementById('videoInstructions');
+                if (videoInstructions) {
+                    videoInstructions.currentTime = 0;
+                    videoInstructions.play().catch(err => {
+                        console.log('Instructions video autoplay prevented:', err);
+                    });
+                }
+            }, 300);
         }
         
         // Auto-play video if it's a question page (5-9)
@@ -317,9 +329,8 @@ function repeatVideo(questionNumber) {
             // Question 1 uses iframe - reload it to restart
             const iframe = document.getElementById('iframe1');
             if (iframe) {
-                // Add timestamp to force reload
-                const baseSrc = 'https://drive.google.com/file/d/1mMC1rUjegtvxXnPDM5VUPkudF7prtXuT/preview?autoplay=1';
-                iframe.src = baseSrc + '&t=' + Date.now();
+                const src = iframe.src;
+                iframe.src = src;
             }
         } else {
             // Questions 2-5 use video tags
