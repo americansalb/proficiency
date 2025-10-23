@@ -189,11 +189,12 @@ async function goToPage(pageNumber) {
             }
 
             // Show preview immediately with "Listen to question..." label
-            const previewLabel = document.querySelector(`#responsePreview${questionNum} .response-preview-label`);
+            const statusLabel = document.getElementById('statusLabel' + questionNum);
             const previewVideo = document.getElementById('previewStream' + questionNum);
 
-            if (previewLabel) {
-                previewLabel.textContent = '🎧 Listen to question...';
+            if (statusLabel) {
+                statusLabel.textContent = '🎧 Listen to question...';
+                statusLabel.className = 'response-preview-label listening';
             }
 
             // Connect camera stream to preview immediately
@@ -244,46 +245,24 @@ async function goToPage(pageNumber) {
 }
 
 function startRecordingCountdown(questionNum) {
-    const countdownOverlay = document.getElementById('recordingCountdown');
-    const countdownContent = document.getElementById('countdownContent');
+    // No more countdown popup - start recording immediately
+    // Start recording
+    if (window.recordingManager) {
+        window.recordingManager.startQuestionRecording(questionNum);
 
-    // Show countdown overlay
-    countdownOverlay.classList.add('active');
+        // Update label to "Provide your response" with recording class and show done button
+        const statusLabel = document.getElementById('statusLabel' + questionNum);
+        const doneButton = document.getElementById('doneButton' + questionNum);
 
-    let count = 3;
+        if (statusLabel) {
+            statusLabel.textContent = '🎤 Provide your response';
+            statusLabel.className = 'response-preview-label recording';
+        }
 
-    function showNumber() {
-        if (count > 0) {
-            countdownContent.innerHTML = `
-                <div class="countdown-number">${count}</div>
-                <div class="countdown-text">Get ready to speak...</div>
-            `;
-            count--;
-            setTimeout(showNumber, 1000);
-        } else {
-            // Hide countdown overlay
-            countdownOverlay.classList.remove('active');
-
-            // Start recording
-            if (window.recordingManager) {
-                window.recordingManager.startQuestionRecording(questionNum);
-
-                // Update label to "Provide your response" and show done button
-                const previewLabel = document.querySelector(`#responsePreview${questionNum} .response-preview-label`);
-                const doneButton = document.getElementById('doneButton' + questionNum);
-
-                if (previewLabel) {
-                    previewLabel.textContent = '🎤 Provide your response';
-                }
-
-                if (doneButton) {
-                    doneButton.classList.add('active');
-                }
-            }
+        if (doneButton) {
+            doneButton.classList.add('active');
         }
     }
-
-    showNumber();
 }
 
 async function finishQuestion(nextPage) {
@@ -630,11 +609,12 @@ function repeatVideo(questionNumber) {
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
 
         // Reset label to "Listen to question..." and hide done button
-        const previewLabel = document.querySelector(`#responsePreview${questionNumber} .response-preview-label`);
+        const statusLabel = document.getElementById('statusLabel' + questionNumber);
         const doneButton = document.getElementById('doneButton' + questionNumber);
 
-        if (previewLabel) {
-            previewLabel.textContent = '🎧 Listen to question...';
+        if (statusLabel) {
+            statusLabel.textContent = '🎧 Listen to question...';
+            statusLabel.className = 'response-preview-label listening';
         }
         if (doneButton) {
             doneButton.classList.remove('active');
