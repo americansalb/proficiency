@@ -21,18 +21,21 @@ let audioContext = null;
 let audioAnalyser = null;
 
 function startTimer(questionNumber) {
-    // Clear any existing timer
+    // Don't reset timer - it should continue across all questions
+    // Only initialize on first question
+    if (questionNumber === 1) {
+        timeRemaining = 1500; // 25 minutes total for all questions
+    }
+
+    // Clear any existing timer interval
     if (timerInterval) {
         clearInterval(timerInterval);
     }
 
-    // Reset to 25 minutes
-    timeRemaining = 1500;
-
     const timerDisplay = document.getElementById('timerDisplay' + questionNumber);
     const timerContainer = document.getElementById('timer' + questionNumber);
 
-    // Update display
+    // Update display immediately
     updateTimerDisplay(timerDisplay, timerContainer);
 
     // Start countdown
@@ -429,6 +432,32 @@ async function completeTest() {
 
             // Wait for all pending uploads to complete
             await window.recordingManager.waitForAllUploads();
+
+            // Combine videos into one file
+            document.getElementById('uploadMessage').textContent = 'Combining videos...';
+
+            try {
+                const combineResponse = await fetch('/api/combine', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        firstName: window.testCredentials.firstName,
+                        lastName: window.testCredentials.lastName,
+                        passcode: window.testCredentials.passcode
+                    })
+                });
+
+                if (combineResponse.ok) {
+                    console.log('Videos combined successfully');
+                } else {
+                    console.error('Video combination failed');
+                }
+            } catch (error) {
+                console.error('Error combining videos:', error);
+                // Don't fail the whole test if combination fails
+            }
         }
 
         // Show success
