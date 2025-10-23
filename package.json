@@ -1,12 +1,12 @@
 {
   "name": "proficiency-screening",
   "version": "1.0.0",
+  "type": "module",
   "description": "AALB Proficiency Screening App with Video Recording",
   "main": "index.js",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "echo 'Build complete'",
-    "deploy": "vercel --prod"
+    "start": "node index.js",
+    "dev": "node index.js"
   },
   "keywords": [
     "proficiency",
@@ -17,6 +17,7 @@
   "author": "Americans Against Language Barriers",
   "license": "MIT",
   "dependencies": {
+    "express": "^4.18.2",
     "formidable": "^3.5.1",
     "googleapis": "^144.0.0"
   }
