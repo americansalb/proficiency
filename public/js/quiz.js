@@ -507,8 +507,8 @@ async function startTest() {
     console.log('Participant:', window.testCredentials.firstName, window.testCredentials.lastName);
     console.log('Passcode:', window.testCredentials.passcode);
 
-    // Go to first question (page 5) - recording will start automatically
-    goToPage(5);
+    // Go to first question (page 6) - recording will start automatically
+    goToPage(6);
 }
 
 function repeatVideo(questionNumber) {
