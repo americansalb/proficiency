@@ -17,7 +17,14 @@ let audioContext = null;
 let audioAnalyser = null;
 
 function stopAllVideos() {
-    // Stop all HTML5 videos
+    // Stop instructions video
+    const videoInstructions = document.getElementById('videoInstructions');
+    if (videoInstructions) {
+        videoInstructions.pause();
+        videoInstructions.currentTime = 0;
+    }
+    
+    // Stop all question videos
     for (let i = 1; i <= 5; i++) {
         const video = document.getElementById('video' + i);
         if (video) {
@@ -25,7 +32,6 @@ function stopAllVideos() {
             video.currentTime = 0;
         }
     }
-    // Note: We don't stop iframes - they'll just keep playing
 }
 
 async function goToPage(pageNumber) {
@@ -64,19 +70,34 @@ async function goToPage(pageNumber) {
             const video = document.getElementById('video' + questionNum);
             
             if (video) {
-                // HTML5 video - auto-play
+                // Auto-play after a short delay
                 setTimeout(() => {
                     video.currentTime = 0;
-                    video.play();
+                    video.play().catch(err => {
+                        console.log('Video autoplay prevented:', err);
+                        // User may need to interact first
+                    });
                 }, 500);
             }
-            // Google Drive iframes will autoplay automatically with ?autoplay=1 parameter
             
             // Start recording for this NEW question
             if (window.recordingManager) {
                 setTimeout(() => {
                     window.recordingManager.startQuestionRecording(questionNum);
                 }, 100);
+            }
+        }
+        
+        // Auto-play instructions video on page 2
+        if (pageNumber === 2) {
+            const videoInstructions = document.getElementById('videoInstructions');
+            if (videoInstructions) {
+                setTimeout(() => {
+                    videoInstructions.currentTime = 0;
+                    videoInstructions.play().catch(err => {
+                        console.log('Instructions video autoplay prevented:', err);
+                    });
+                }, 500);
             }
         }
         
@@ -303,18 +324,15 @@ function repeatVideo(questionNumber) {
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
         
-        // Check if it's an HTML5 video or iframe
+        // Get the video element
         const video = document.getElementById('video' + questionNumber);
-        const iframe = document.querySelector(`#page${questionNumber + 4} iframe`);
         
         if (video) {
-            // HTML5 video - use normal controls
+            // Restart the video
             video.currentTime = 0;
-            video.play();
-        } else if (iframe) {
-            // Google Drive iframe - reload it with autoplay to restart
-            const currentSrc = iframe.src;
-            iframe.src = currentSrc + '&t=' + Date.now(); // Add timestamp to force reload
+            video.play().catch(err => {
+                console.log('Video play prevented:', err);
+            });
         }
         
         // Disable button if no repeats left
