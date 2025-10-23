@@ -260,13 +260,13 @@
             right: 0;
             background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
             color: white;
-            padding: 20px;
+            padding: 15px 20px;
             font-weight: bold;
-            font-size: 24px;
+            font-size: 20px;
             display: none;
             align-items: center;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
             z-index: 10000;
             box-shadow: 0 4px 20px rgba(231, 76, 60, 0.5);
             border-bottom: 4px solid #fff;
@@ -282,11 +282,18 @@
         }
 
         .recording-dot {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             background: white;
             border-radius: 50%;
             animation: pulse 1.5s infinite;
+        }
+
+        .recording-icons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            font-size: 28px;
         }
 
         .camera-permission {
@@ -384,46 +391,17 @@
             text-align: center;
             padding: 20px;
         }
-
-        .upload-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .upload-overlay.active {
-            display: flex;
-        }
-
-        .upload-overlay .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #14FFEC;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
-
-        .upload-overlay h2 {
-            color: white;
-            margin: 0;
-        }
     </style>
 </head>
 <body>
     <!-- SUPER OBVIOUS RECORDING INDICATOR -->
     <div class="recording-indicator" id="recordingIndicator">
         <div class="recording-dot"></div>
-        <span>● REC - YOU ARE BEING RECORDED</span>
+        <div class="recording-icons">
+            <span>📹</span>
+            <span>🎤</span>
+        </div>
+        <span>RECORDING IN PROGRESS</span>
         <div class="recording-dot"></div>
     </div>
 
@@ -451,14 +429,14 @@
         <!-- Page 2: Instructions -->
         <div class="page" id="page2">
             <h1>English Proficiency Test Instructions</h1>
-            
+
             <div class="video-container">
                 <video id="videoInstructions" disablePictureInPicture>
                     <source src="https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Instructions_ENG_khs3u4.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
             </div>
-            
+
             <div class="instructions-box">
                 <ol>
                     <li>You will listen carefully to questions you're asked in English, and you will respond to them, also in English.</li>
@@ -466,6 +444,12 @@
                     <li>Please provide complete responses.</li>
                     <li>You may repeat each question up to two times before responding.</li>
                 </ol>
+            </div>
+
+            <div class="center">
+                <button class="repeat-button" onclick="repeatInstructions()">
+                    🔄 Repeat Instructions Video
+                </button>
             </div>
 
             <p style="text-align: center; font-weight: 600; margin: 30px 0;">
@@ -480,12 +464,12 @@
         <!-- Page 3: Passcode and Verification -->
         <div class="page" id="page3">
             <h1>Before You Begin</h1>
-            
+
             <h2 style="margin-top: 30px;">Enter Passcode</h2>
-            <input 
-                type="text" 
-                id="passcodeInput" 
-                class="passcode-input" 
+            <input
+                type="text"
+                id="passcodeInput"
+                class="passcode-input"
                 placeholder="Enter your passcode"
                 maxlength="13">
             <div class="error-message" id="passcodeError">Invalid passcode. Please try again.</div>
@@ -511,15 +495,15 @@
             </div>
 
            <h2>Your Name</h2>
-<input 
-    type="text" 
-    id="firstName" 
-    class="text-input" 
+<input
+    type="text"
+    id="firstName"
+    class="text-input"
     placeholder="First Name">
-<input 
-    type="text" 
-    id="lastName" 
-    class="text-input" 
+<input
+    type="text"
+    id="lastName"
+    class="text-input"
     placeholder="Last Name">
 
             <div class="center">
@@ -530,14 +514,14 @@
         <!-- Page 4: NEW - Camera/Mic Test Page -->
         <div class="page" id="page4">
             <h1>Test Your Equipment</h1>
-            
+
             <p style="text-align: center; margin: 20px 0;">
                 Make sure your camera and microphone are working before starting the test.
             </p>
 
             <div class="preview-container">
                 <video id="previewVideo" class="preview-video" autoplay muted playsinline></video>
-                
+
                 <div class="audio-meter">
                     <div class="audio-level" id="audioLevel"></div>
                     <div class="audio-label">🎤 Speak to test microphone</div>
@@ -556,13 +540,13 @@
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 1 of 5</h2>
             </div>
-            
+
             <div class="video-container">
-                <iframe 
+                <iframe
                     id="iframe1"
-                    src="https://drive.google.com/file/d/1mMC1rUjegtvxXnPDM5VUPkudF7prtXuT/preview" 
-                    width="100%" 
-                    height="450" 
+                    src="https://drive.google.com/file/d/1mMC1rUjegtvxXnPDM5VUPkudF7prtXuT/preview"
+                    width="100%"
+                    height="450"
                     allow="autoplay"
                     style="border: none;">
                 </iframe>
@@ -584,7 +568,7 @@
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 2 of 5</h2>
             </div>
-            
+
             <div class="video-container">
                 <video id="video2" disablePictureInPicture>
                     <!-- TODO: Add Google Drive link here when ready -->
@@ -611,7 +595,7 @@
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 3 of 5</h2>
             </div>
-            
+
             <div class="video-container">
                 <video id="video3" disablePictureInPicture>
                     <!-- TODO: Add Google Drive link here when ready -->
@@ -638,7 +622,7 @@
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 4 of 5</h2>
             </div>
-            
+
             <div class="video-container">
                 <video id="video4" disablePictureInPicture>
                     <!-- TODO: Add Google Drive link here when ready -->
@@ -665,7 +649,7 @@
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 5 of 5</h2>
             </div>
-            
+
             <div class="video-container">
                 <video id="video5" disablePictureInPicture>
                     <!-- TODO: Add Google Drive link here when ready -->
@@ -713,12 +697,6 @@
                 Your recording has been submitted successfully. You may now close this window.
             </p>
         </div>
-    </div>
-
-    <!-- Upload Overlay -->
-    <div class="upload-overlay" id="uploadOverlay">
-        <div class="spinner"></div>
-        <h2>Uploading your answer...</h2>
     </div>
 
     <script src="/js/recording.js"></script>
