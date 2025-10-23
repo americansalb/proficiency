@@ -29,16 +29,16 @@ export default async function checkCompletionHandler(req, res) {
     const drive = google.drive({ version: 'v3', auth });
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-    // Check for English test completion
-    const englishQuery = `'${folderId}' in parents and name contains '${passcode}' and name contains 'ENGLISH' and mimeType='video/webm'`;
+    // Check for English test completion - look specifically for Q5
+    const englishQuery = `'${folderId}' in parents and name contains '${passcode}' and name contains 'ENGLISH' and name contains 'Q5' and mimeType='video/webm'`;
     const englishResponse = await drive.files.list({
       q: englishQuery,
       fields: 'files(id, name)',
       spaces: 'drive',
     });
 
-    // Check for Non-English test completion
-    const nonEnglishQuery = `'${folderId}' in parents and name contains '${passcode}' and name contains 'NONENG' and mimeType='video/webm'`;
+    // Check for Non-English test completion - look specifically for Q5
+    const nonEnglishQuery = `'${folderId}' in parents and name contains '${passcode}' and name contains 'NONENG' and name contains 'Q5' and mimeType='video/webm'`;
     const nonEnglishResponse = await drive.files.list({
       q: nonEnglishQuery,
       fields: 'files(id, name)',
@@ -48,18 +48,18 @@ export default async function checkCompletionHandler(req, res) {
     const englishFiles = englishResponse.data.files || [];
     const nonEnglishFiles = nonEnglishResponse.data.files || [];
 
-    // Consider test completed if 5 videos exist
+    // Consider test completed if Q5 exists (means they finished all questions)
     const completedTests = {
-      english: englishFiles.length >= 5,
-      nonEnglish: nonEnglishFiles.length >= 5
+      english: englishFiles.length > 0,
+      nonEnglish: nonEnglishFiles.length > 0
     };
 
     return res.json({
       success: true,
       completed: completedTests,
       details: {
-        english: englishFiles.length,
-        nonEnglish: nonEnglishFiles.length
+        englishQ5Found: englishFiles.length,
+        nonEnglishQ5Found: nonEnglishFiles.length
       }
     });
 
