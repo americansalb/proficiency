@@ -335,9 +335,9 @@ async function completeTest() {
         window.recordingManager.stopAllRecording();
         
         // Go to completion page
-        currentPage = 11;
+        currentPage = 10;
         document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-        document.getElementById('page11').classList.add('active');
+        document.getElementById('page10').classList.add('active');
     } finally {
         isChangingPage = false;
     }
@@ -361,7 +361,7 @@ window.addEventListener('beforeunload', function() {
     
     // Stop preview if active
     if (previewStream) {
-        previewStream.getTracks().forEach(track => track.stop());
+        previewStream.getTracks().forEach(track => track.stop();
     }
     
     if (window.recordingManager) {
