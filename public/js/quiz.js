@@ -182,6 +182,15 @@ async function goToPage(pageNumber) {
         if (pageNumber >= 6 && pageNumber <= 10) {
             const questionNum = pageNumber - 5;
 
+            // Reset repeat button and counter display for this question
+            const repeatButton = document.getElementById('repeat' + questionNum);
+            const counter = document.getElementById('counter' + questionNum);
+            if (repeatButton && counter) {
+                repeatButton.disabled = false;
+                repeatButton.textContent = '🔄 Repeat Question';
+                counter.textContent = `Repeats remaining: ${repeatCounts[questionNum]}`;
+            }
+
             // Start timer for this question
             startTimer(questionNum);
 
@@ -350,6 +359,13 @@ function selectTest(testType) {
 
     // Store selected test type
     window.testCredentials.testType = testType;
+
+    // Reset repeat counts for new test
+    repeatCounts[1] = 2;
+    repeatCounts[2] = 2;
+    repeatCounts[3] = 2;
+    repeatCounts[4] = 2;
+    repeatCounts[5] = 2;
 
     // Load appropriate instructions
     const englishInstr = document.getElementById('englishInstructions');
@@ -646,6 +662,13 @@ function returnToTestSelection() {
 
     // Reset timer
     timeRemaining = 1500;
+
+    // Reset repeat counts for all questions
+    repeatCounts[1] = 2;
+    repeatCounts[2] = 2;
+    repeatCounts[3] = 2;
+    repeatCounts[4] = 2;
+    repeatCounts[5] = 2;
 
     // Go back to test selection page
     goToPage(4);
