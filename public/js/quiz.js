@@ -17,7 +17,7 @@ let audioContext = null;
 let audioAnalyser = null;
 
 function stopAllVideos() {
-    // Stop all question videos
+    // Stop all HTML5 videos
     for (let i = 1; i <= 5; i++) {
         const video = document.getElementById('video' + i);
         if (video) {
@@ -25,6 +25,15 @@ function stopAllVideos() {
             video.currentTime = 0;
         }
     }
+    
+    // Stop all iframes by clearing src temporarily
+    const iframes = document.querySelectorAll('.video-container iframe');
+    iframes.forEach(iframe => {
+        if (iframe.src) {
+            iframe.dataset.originalSrc = iframe.src;
+            iframe.src = '';
+        }
+    });
 }
 
 async function goToPage(pageNumber) {
@@ -57,21 +66,47 @@ async function goToPage(pageNumber) {
         document.getElementById('page' + pageNumber).classList.add('active');
         currentPage = pageNumber;
         
-        // Auto-play video if it's a question page (5-9)
+        // Auto-play video if it's a question page (5-9) or instructions page (2)
         if (pageNumber >= 5 && pageNumber <= 9) {
             const questionNum = pageNumber - 4;
             const video = document.getElementById('video' + questionNum);
+            const iframe = document.querySelector(`#page${pageNumber} iframe`);
+            
             if (video) {
+                // HTML5 video - auto-play
                 setTimeout(() => {
                     video.currentTime = 0;
                     video.play();
                 }, 500);
+            } else if (iframe) {
+                // Google Drive iframe - restore src with autoplay to start video
+                if (iframe.dataset.originalSrc) {
+                    let src = iframe.dataset.originalSrc;
+                    if (!src.includes('autoplay=1')) {
+                        src += (src.includes('?') ? '&' : '?') + 'autoplay=1';
+                    }
+                    setTimeout(() => {
+                        iframe.src = src;
+                    }, 100);
+                }
             }
             
             // Start recording for this NEW question
             if (window.recordingManager) {
                 setTimeout(() => {
                     window.recordingManager.startQuestionRecording(questionNum);
+                }, 100);
+            }
+        } else if (pageNumber === 2) {
+            // Instructions page - autoplay iframe
+            const iframe = document.querySelector('#page2 iframe');
+            if (iframe && iframe.dataset.originalSrc) {
+                let src = iframe.dataset.originalSrc;
+                if (!src.includes('autoplay=1')) {
+                    src += (src.includes('?') ? '&' : '?') + 'autoplay=1';
+                }
+                setTimeout(() => {
+                    iframe.src = src;
                 }, 100);
             }
         }
@@ -299,11 +334,25 @@ function repeatVideo(questionNumber) {
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
         
-        // Replay the video
+        // Check if it's an HTML5 video or iframe
         const video = document.getElementById('video' + questionNumber);
+        const iframe = document.querySelector(`#page${questionNumber + 4} iframe`);
+        
         if (video) {
+            // HTML5 video - use normal controls
             video.currentTime = 0;
             video.play();
+        } else if (iframe) {
+            // Google Drive iframe - reload it with autoplay to restart
+            let currentSrc = iframe.src;
+            // Make sure autoplay=1 is in the URL
+            if (!currentSrc.includes('autoplay=1')) {
+                currentSrc += (currentSrc.includes('?') ? '&' : '?') + 'autoplay=1';
+            }
+            iframe.src = '';
+            setTimeout(() => {
+                iframe.src = currentSrc;
+            }, 100);
         }
         
         // Disable button if no repeats left
