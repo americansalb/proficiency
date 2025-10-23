@@ -317,8 +317,9 @@ function repeatVideo(questionNumber) {
             // Question 1 uses iframe - reload it to restart
             const iframe = document.getElementById('iframe1');
             if (iframe) {
-                const src = iframe.src;
-                iframe.src = src;
+                // Add timestamp to force reload
+                const baseSrc = 'https://drive.google.com/file/d/1mMC1rUjegtvxXnPDM5VUPkudF7prtXuT/preview?autoplay=1';
+                iframe.src = baseSrc + '&t=' + Date.now();
             }
         } else {
             // Questions 2-5 use video tags
