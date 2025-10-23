@@ -133,21 +133,18 @@
             line-height: 1.6;
         }
 
-        .passcode-input, .text-input {
+        .passcode-input {
             width: 100%;
             padding: 15px;
             font-size: 18px;
             border: 2px solid #ddd;
             border-radius: 8px;
             margin: 20px 0;
-        }
-
-        .passcode-input {
             text-align: center;
             letter-spacing: 2px;
         }
 
-        .passcode-input:focus, .text-input:focus {
+        .passcode-input:focus {
             outline: none;
             border-color: #0d7377;
         }
@@ -184,9 +181,32 @@
             font-size: 15px;
         }
 
+        .text-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #0d7377;
+        }
+
         .error-message {
             color: #c0392b;
             background: #fadbd8;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .success-message {
+            color: #27ae60;
+            background: #d4edda;
             padding: 12px;
             border-radius: 6px;
             margin: 15px 0;
@@ -344,6 +364,26 @@
             color: #c0392b;
         }
 
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0d7377;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .upload-status {
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -410,18 +450,6 @@
                 maxlength="13">
             <div class="error-message" id="passcodeError">Invalid passcode. Please try again.</div>
 
-            <h2 style="margin-top: 30px;">Your Information</h2>
-            <input 
-                type="text" 
-                id="firstName" 
-                class="text-input" 
-                placeholder="First Name">
-            <input 
-                type="text" 
-                id="lastName" 
-                class="text-input" 
-                placeholder="Last Name">
-
             <h2 style="margin-top: 30px;">Verification Checklist</h2>
             <div class="checkbox-group">
                 <div class="checkbox-item">
@@ -442,8 +470,15 @@
                 </div>
             </div>
 
+            <h2>Electronic Signature</h2>
+            <input 
+                type="text" 
+                id="fullName" 
+                class="text-input" 
+                placeholder="Type your full name as electronic signature">
+
             <div class="center">
-                <button class="button" onclick="validateAndTestEquipment()">Test Camera & Microphone</button>
+                <button class="button" id="beginBtn" onclick="validateAndTestEquipment()">Test Camera & Microphone</button>
             </div>
         </div>
 
@@ -471,7 +506,7 @@
             </div>
         </div>
 
-        <!-- Page 5: Question 1 -->
+        <!-- Pages 5-9: Questions 1-5 -->
         <div class="page" id="page5">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 1 of 5</h2>
@@ -497,7 +532,6 @@
             </div>
         </div>
 
-        <!-- Page 6: Question 2 -->
         <div class="page" id="page6">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 2 of 5</h2>
@@ -523,7 +557,6 @@
             </div>
         </div>
 
-        <!-- Page 7: Question 3 -->
         <div class="page" id="page7">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 3 of 5</h2>
@@ -549,7 +582,6 @@
             </div>
         </div>
 
-        <!-- Page 8: Question 4 -->
         <div class="page" id="page8">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 4 of 5</h2>
@@ -575,7 +607,6 @@
             </div>
         </div>
 
-        <!-- Page 9: Question 5 -->
         <div class="page" id="page9">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 5 of 5</h2>
@@ -601,8 +632,23 @@
             </div>
         </div>
 
-        <!-- Page 10: Completion -->
+        <!-- Page 10: Upload Progress -->
         <div class="page" id="page10">
+            <h1>Uploading Your Recording</h1>
+            <div class="upload-status">
+                <div class="loading-spinner" id="uploadSpinner"></div>
+                <p id="uploadMessage">Please wait while we upload your test recording...</p>
+                <div class="success-message" id="uploadSuccess">
+                    ✓ Recording uploaded successfully!
+                </div>
+                <div class="error-message" id="uploadError">
+                    ✗ Upload failed. Please contact support.
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 11: Completion -->
+        <div class="page" id="page11">
             <h1>Test Complete</h1>
             <p class="center" style="margin: 40px 0; font-size: 18px;">
                 Thank you for completing the English Proficiency Screening!
