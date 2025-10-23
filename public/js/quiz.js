@@ -17,15 +17,11 @@ let audioContext = null;
 let audioAnalyser = null;
 
 function stopAllVideos() {
-    // Stop instructions video
-    const videoInstructions = document.getElementById('videoInstructions');
-    if (videoInstructions) {
-        videoInstructions.pause();
-        videoInstructions.currentTime = 0;
-    }
+    // Instructions and Q1 use iframes - can't stop them, they'll just keep playing
+    // But they're hidden when we change pages anyway
     
-    // Stop all question videos
-    for (let i = 1; i <= 5; i++) {
+    // Stop question videos 2-5 (these are <video> tags)
+    for (let i = 2; i <= 5; i++) {
         const video = document.getElementById('video' + i);
         if (video) {
             video.pause();
@@ -69,15 +65,7 @@ async function goToPage(pageNumber) {
         
         // Auto-play instructions video on page 2
         if (pageNumber === 2) {
-            setTimeout(() => {
-                const videoInstructions = document.getElementById('videoInstructions');
-                if (videoInstructions) {
-                    videoInstructions.currentTime = 0;
-                    videoInstructions.play().catch(err => {
-                        console.log('Instructions video autoplay prevented:', err);
-                    });
-                }
-            }, 300);
+            // Instructions uses iframe - it will autoplay automatically
         }
         
         // Auto-play video if it's a question page (5-9)
@@ -89,16 +77,19 @@ async function goToPage(pageNumber) {
                 window.recordingManager.startQuestionRecording(questionNum);
             }
             
-            // Play the video
-            setTimeout(() => {
-                const video = document.getElementById('video' + questionNum);
-                if (video) {
-                    video.currentTime = 0;
-                    video.play().catch(err => {
-                        console.log('Video autoplay prevented:', err);
-                    });
-                }
-            }, 300);
+            // Question 1 uses iframe (will autoplay automatically)
+            // Questions 2-5 use video tags (play them)
+            if (questionNum > 1) {
+                setTimeout(() => {
+                    const video = document.getElementById('video' + questionNum);
+                    if (video) {
+                        video.currentTime = 0;
+                        video.play().catch(err => {
+                            console.log('Video autoplay prevented:', err);
+                        });
+                    }
+                }, 300);
+            }
         }
     } finally {
         setTimeout(() => {
@@ -321,15 +312,23 @@ function repeatVideo(questionNumber) {
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
         
-        // Get the video element
-        const video = document.getElementById('video' + questionNumber);
-        
-        if (video) {
-            // Restart the video
-            video.currentTime = 0;
-            video.play().catch(err => {
-                console.log('Video play prevented:', err);
-            });
+        // Check if it's Question 1 (iframe) or other questions (video)
+        if (questionNumber === 1) {
+            // Question 1 uses iframe - reload it to restart
+            const iframe = document.getElementById('iframe1');
+            if (iframe) {
+                const src = iframe.src;
+                iframe.src = src;
+            }
+        } else {
+            // Questions 2-5 use video tags
+            const video = document.getElementById('video' + questionNumber);
+            if (video) {
+                video.currentTime = 0;
+                video.play().catch(err => {
+                    console.log('Video play prevented:', err);
+                });
+            }
         }
         
         // Disable button if no repeats left
