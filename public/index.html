@@ -747,6 +747,53 @@
             background: #229954;
             transform: translateY(-2px);
         }
+
+        /* PLAYBACK MODAL */
+        .playback-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .playback-modal.active {
+            display: flex;
+        }
+
+        .playback-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .playback-modal-content h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .playback-modal-content video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            margin: 20px 0;
+        }
+
+        .playback-modal-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -765,6 +812,22 @@
     <div class="recording-countdown" id="recordingCountdown">
         <div id="countdownContent">
             <!-- Will be filled dynamically -->
+        </div>
+    </div>
+
+    <!-- PLAYBACK PREVIEW MODAL -->
+    <div class="playback-modal" id="playbackModal">
+        <div class="playback-modal-content">
+            <h2>📹 Review Your Response</h2>
+            <video id="modalPlaybackVideo" controls playsinline></video>
+            <div class="playback-modal-actions">
+                <button class="erase-button" onclick="eraseRecordingModal()">
+                    🗑️ Erase & Re-record
+                </button>
+                <button class="submit-button" onclick="submitResponseModal()">
+                    ✅ Submit Response
+                </button>
+            </div>
         </div>
     </div>
 
@@ -985,9 +1048,8 @@
                     </video>
                 </div>
 
-                <!-- Response Preview (shows user's camera while recording) -->
+                <!-- Response Preview (shows user's camera) -->
                 <div class="response-preview" id="responsePreview1">
-                    <div class="response-preview-label listening" id="statusLabel1">🎧 Listen to question...</div>
                     <video id="previewStream1" autoplay muted playsinline></video>
                 </div>
             </div>
@@ -999,29 +1061,14 @@
                 <span class="repeat-counter" id="counter1">Repeats remaining: 2</span>
             </div>
 
-            <!-- Recording Controls -->
+            <!-- Recording Controls - Always Visible -->
             <div class="center" id="recordingControls1">
-                <button class="record-button" id="startRecordBtn1" onclick="startRecording(1)" style="display: none;">
+                <button class="record-button" id="startRecordBtn1" onclick="startRecording(1)" disabled>
                     🎤 Start Recording
                 </button>
                 <button class="stop-button" id="stopRecordBtn1" onclick="stopRecording(1)" style="display: none;">
                     ⏹️ Stop Recording
                 </button>
-            </div>
-
-            <!-- Playback Preview (shows recorded response) -->
-            <div class="playback-container" id="playbackContainer1" style="display: none;">
-                <div class="playback-label">📹 Your Recorded Response - Preview</div>
-                <video id="playbackVideo1" controls playsinline></video>
-
-                <div class="playback-actions">
-                    <button class="erase-button" onclick="eraseRecording(1)">
-                        🗑️ Erase & Re-record
-                    </button>
-                    <button class="submit-button" onclick="submitResponse(1)">
-                        ✅ Submit Response
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -1049,9 +1096,8 @@
                     </video>
                 </div>
 
-                <!-- Response Preview (shows user's camera while recording) -->
+                <!-- Response Preview (shows user's camera) -->
                 <div class="response-preview" id="responsePreview2">
-                    <div class="response-preview-label listening" id="statusLabel2">🎧 Listen to question...</div>
                     <video id="previewStream2" autoplay muted playsinline></video>
                 </div>
             </div>
@@ -1063,29 +1109,14 @@
                 <span class="repeat-counter" id="counter2">Repeats remaining: 2</span>
             </div>
 
-            <!-- Recording Controls -->
+            <!-- Recording Controls - Always Visible -->
             <div class="center" id="recordingControls2">
-                <button class="record-button" id="startRecordBtn2" onclick="startRecording(2)" style="display: none;">
+                <button class="record-button" id="startRecordBtn2" onclick="startRecording(2)" disabled>
                     🎤 Start Recording
                 </button>
                 <button class="stop-button" id="stopRecordBtn2" onclick="stopRecording(2)" style="display: none;">
                     ⏹️ Stop Recording
                 </button>
-            </div>
-
-            <!-- Playback Preview (shows recorded response) -->
-            <div class="playback-container" id="playbackContainer2" style="display: none;">
-                <div class="playback-label">📹 Your Recorded Response - Preview</div>
-                <video id="playbackVideo2" controls playsinline></video>
-
-                <div class="playback-actions">
-                    <button class="erase-button" onclick="eraseRecording(2)">
-                        🗑️ Erase & Re-record
-                    </button>
-                    <button class="submit-button" onclick="submitResponse(2)">
-                        ✅ Submit Response
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -1113,9 +1144,8 @@
                     </video>
                 </div>
 
-                <!-- Response Preview (shows user's camera while recording) -->
+                <!-- Response Preview (shows user's camera) -->
                 <div class="response-preview" id="responsePreview3">
-                    <div class="response-preview-label listening" id="statusLabel3">🎧 Listen to question...</div>
                     <video id="previewStream3" autoplay muted playsinline></video>
                 </div>
             </div>
@@ -1127,29 +1157,14 @@
                 <span class="repeat-counter" id="counter3">Repeats remaining: 2</span>
             </div>
 
-            <!-- Recording Controls -->
+            <!-- Recording Controls - Always Visible -->
             <div class="center" id="recordingControls3">
-                <button class="record-button" id="startRecordBtn3" onclick="startRecording(3)" style="display: none;">
+                <button class="record-button" id="startRecordBtn3" onclick="startRecording(3)" disabled>
                     🎤 Start Recording
                 </button>
                 <button class="stop-button" id="stopRecordBtn3" onclick="stopRecording(3)" style="display: none;">
                     ⏹️ Stop Recording
                 </button>
-            </div>
-
-            <!-- Playback Preview (shows recorded response) -->
-            <div class="playback-container" id="playbackContainer3" style="display: none;">
-                <div class="playback-label">📹 Your Recorded Response - Preview</div>
-                <video id="playbackVideo3" controls playsinline></video>
-
-                <div class="playback-actions">
-                    <button class="erase-button" onclick="eraseRecording(3)">
-                        🗑️ Erase & Re-record
-                    </button>
-                    <button class="submit-button" onclick="submitResponse(3)">
-                        ✅ Submit Response
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -1177,9 +1192,8 @@
                     </video>
                 </div>
 
-                <!-- Response Preview (shows user's camera while recording) -->
+                <!-- Response Preview (shows user's camera) -->
                 <div class="response-preview" id="responsePreview4">
-                    <div class="response-preview-label listening" id="statusLabel4">🎧 Listen to question...</div>
                     <video id="previewStream4" autoplay muted playsinline></video>
                 </div>
             </div>
@@ -1191,29 +1205,14 @@
                 <span class="repeat-counter" id="counter4">Repeats remaining: 2</span>
             </div>
 
-            <!-- Recording Controls -->
+            <!-- Recording Controls - Always Visible -->
             <div class="center" id="recordingControls4">
-                <button class="record-button" id="startRecordBtn4" onclick="startRecording(4)" style="display: none;">
+                <button class="record-button" id="startRecordBtn4" onclick="startRecording(4)" disabled>
                     🎤 Start Recording
                 </button>
                 <button class="stop-button" id="stopRecordBtn4" onclick="stopRecording(4)" style="display: none;">
                     ⏹️ Stop Recording
                 </button>
-            </div>
-
-            <!-- Playback Preview (shows recorded response) -->
-            <div class="playback-container" id="playbackContainer4" style="display: none;">
-                <div class="playback-label">📹 Your Recorded Response - Preview</div>
-                <video id="playbackVideo4" controls playsinline></video>
-
-                <div class="playback-actions">
-                    <button class="erase-button" onclick="eraseRecording(4)">
-                        🗑️ Erase & Re-record
-                    </button>
-                    <button class="submit-button" onclick="submitResponse(4)">
-                        ✅ Submit Response
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -1241,9 +1240,8 @@
                     </video>
                 </div>
 
-                <!-- Response Preview (shows user's camera while recording) -->
+                <!-- Response Preview (shows user's camera) -->
                 <div class="response-preview" id="responsePreview5">
-                    <div class="response-preview-label listening" id="statusLabel5">🎧 Listen to question...</div>
                     <video id="previewStream5" autoplay muted playsinline></video>
                 </div>
             </div>
@@ -1255,29 +1253,14 @@
                 <span class="repeat-counter" id="counter5">Repeats remaining: 2</span>
             </div>
 
-            <!-- Recording Controls -->
+            <!-- Recording Controls - Always Visible -->
             <div class="center" id="recordingControls5">
-                <button class="record-button" id="startRecordBtn5" onclick="startRecording(5)" style="display: none;">
+                <button class="record-button" id="startRecordBtn5" onclick="startRecording(5)" disabled>
                     🎤 Start Recording
                 </button>
                 <button class="stop-button" id="stopRecordBtn5" onclick="stopRecording(5)" style="display: none;">
                     ⏹️ Stop Recording
                 </button>
-            </div>
-
-            <!-- Playback Preview (shows recorded response) -->
-            <div class="playback-container" id="playbackContainer5" style="display: none;">
-                <div class="playback-label">📹 Your Recorded Response - Preview</div>
-                <video id="playbackVideo5" controls playsinline></video>
-
-                <div class="playback-actions">
-                    <button class="erase-button" onclick="eraseRecording(5)">
-                        🗑️ Erase & Re-record
-                    </button>
-                    <button class="submit-button" onclick="submitResponse(5)">
-                        ✅ Submit & Complete Test
-                    </button>
-                </div>
             </div>
         </div>
 

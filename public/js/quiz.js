@@ -183,22 +183,16 @@ async function goToPage(pageNumber) {
             const questionNum = pageNumber - 5;
 
             // Reset all UI elements for this question
-            const statusLabel = document.getElementById('statusLabel' + questionNum);
             const previewVideo = document.getElementById('previewStream' + questionNum);
             const startBtn = document.getElementById('startRecordBtn' + questionNum);
             const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
-            const playbackContainer = document.getElementById('playbackContainer' + questionNum);
 
-            // Set initial status
-            if (statusLabel) {
-                statusLabel.textContent = '🎧 Listen to question...';
-                statusLabel.className = 'response-preview-label listening';
+            // Set button initial states
+            if (startBtn) {
+                startBtn.style.display = 'inline-block';
+                startBtn.disabled = true; // Disabled until video ends
             }
-
-            // Hide all recording controls initially
-            if (startBtn) startBtn.style.display = 'none';
             if (stopBtn) stopBtn.style.display = 'none';
-            if (playbackContainer) playbackContainer.style.display = 'none';
 
             // Connect camera stream to preview immediately
             if (window.recordingManager) {
@@ -221,20 +215,20 @@ async function goToPage(pageNumber) {
             // Start timer for this question
             startTimer(questionNum);
 
-            // Play video and show start button when it ends
+            // Play video and enable start button when it ends
             setTimeout(() => {
                 const video = document.getElementById('video' + questionNum);
                 if (video) {
                     video.currentTime = 0;
 
-                    // When video ends, show start recording button
+                    // When video ends, enable start recording button
                     video.onended = () => {
                         startRecordingCountdown(questionNum);
                     };
 
                     video.play().catch(err => {
                         console.log('Video autoplay prevented:', err);
-                        // If autoplay fails, show start button immediately
+                        // If autoplay fails, enable start button immediately
                         startRecordingCountdown(questionNum);
                     });
                 }
@@ -248,37 +242,28 @@ async function goToPage(pageNumber) {
 }
 
 function startRecordingCountdown(questionNum) {
-    // Show "Ready to record" status and Start Recording button
-    const statusLabel = document.getElementById('statusLabel' + questionNum);
+    // Enable Start Recording button after video ends
     const startBtn = document.getElementById('startRecordBtn' + questionNum);
 
-    if (statusLabel) {
-        statusLabel.textContent = '✅ Ready to record';
-        statusLabel.className = 'response-preview-label listening';
-    }
-
     if (startBtn) {
-        startBtn.style.display = 'inline-block';
+        startBtn.disabled = false;
     }
 }
 
-// Store recorded blobs temporarily
+// Store recorded blobs temporarily and track current question
 const recordedBlobs = {};
+let currentRecordingQuestion = null;
 
 function startRecording(questionNum) {
     // Hide start button, show stop button
     const startBtn = document.getElementById('startRecordBtn' + questionNum);
     const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
-    const statusLabel = document.getElementById('statusLabel' + questionNum);
 
     if (startBtn) startBtn.style.display = 'none';
     if (stopBtn) stopBtn.style.display = 'inline-block';
 
-    // Update status label
-    if (statusLabel) {
-        statusLabel.textContent = '🎤 Recording... speak now';
-        statusLabel.className = 'response-preview-label recording';
-    }
+    // Track current question
+    currentRecordingQuestion = questionNum;
 
     // Start recording
     if (window.recordingManager) {
@@ -287,17 +272,12 @@ function startRecording(questionNum) {
 }
 
 async function stopRecording(questionNum) {
-    // Hide stop button
+    // Hide stop button, show start button
     const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
-    const statusLabel = document.getElementById('statusLabel' + questionNum);
+    const startBtn = document.getElementById('startRecordBtn' + questionNum);
 
     if (stopBtn) stopBtn.style.display = 'none';
-
-    // Update status label
-    if (statusLabel) {
-        statusLabel.textContent = '✅ Recording stopped';
-        statusLabel.className = 'response-preview-label listening';
-    }
+    if (startBtn) startBtn.style.display = 'inline-block';
 
     // Stop recording and get blob
     if (window.recordingManager) {
@@ -305,13 +285,13 @@ async function stopRecording(questionNum) {
             const blob = await window.recordingManager.stopQuestionRecording();
             recordedBlobs[questionNum] = blob;
 
-            // Show playback preview
-            const playbackContainer = document.getElementById('playbackContainer' + questionNum);
-            const playbackVideo = document.getElementById('playbackVideo' + questionNum);
+            // Show modal with playback preview
+            const modal = document.getElementById('playbackModal');
+            const modalVideo = document.getElementById('modalPlaybackVideo');
 
-            if (playbackContainer && playbackVideo && blob) {
-                playbackVideo.src = URL.createObjectURL(blob);
-                playbackContainer.style.display = 'block';
+            if (modal && modalVideo && blob) {
+                modalVideo.src = URL.createObjectURL(blob);
+                modal.classList.add('active');
             }
         } catch (error) {
             console.error('Error stopping recording:', error);
@@ -320,35 +300,28 @@ async function stopRecording(questionNum) {
     }
 }
 
-function eraseRecording(questionNum) {
+function eraseRecordingModal() {
+    const questionNum = currentRecordingQuestion;
+
     // Clear the recorded blob
     delete recordedBlobs[questionNum];
 
-    // Hide playback container
-    const playbackContainer = document.getElementById('playbackContainer' + questionNum);
-    const playbackVideo = document.getElementById('playbackVideo' + questionNum);
+    // Hide modal
+    const modal = document.getElementById('playbackModal');
+    const modalVideo = document.getElementById('modalPlaybackVideo');
 
-    if (playbackContainer) playbackContainer.style.display = 'none';
-    if (playbackVideo) {
-        URL.revokeObjectURL(playbackVideo.src);
-        playbackVideo.src = '';
+    if (modal) modal.classList.remove('active');
+    if (modalVideo) {
+        URL.revokeObjectURL(modalVideo.src);
+        modalVideo.src = '';
     }
 
-    // Show start button again
-    const statusLabel = document.getElementById('statusLabel' + questionNum);
-    const startBtn = document.getElementById('startRecordBtn' + questionNum);
-
-    if (statusLabel) {
-        statusLabel.textContent = '✅ Ready to record';
-        statusLabel.className = 'response-preview-label listening';
-    }
-
-    if (startBtn) {
-        startBtn.style.display = 'inline-block';
-    }
+    // Reset buttons - start button should already be visible
 }
 
-async function submitResponse(questionNum) {
+async function submitResponseModal() {
+    const questionNum = currentRecordingQuestion;
+
     // Get the recorded blob
     const blob = recordedBlobs[questionNum];
 
@@ -357,16 +330,22 @@ async function submitResponse(questionNum) {
         return;
     }
 
+    // Hide modal
+    const modal = document.getElementById('playbackModal');
+    const modalVideo = document.getElementById('modalPlaybackVideo');
+
+    if (modal) modal.classList.remove('active');
+    if (modalVideo) {
+        URL.revokeObjectURL(modalVideo.src);
+        modalVideo.src = '';
+    }
+
     // Upload in background
     if (window.recordingManager) {
         window.recordingManager.uploadQuestionRecording(blob, questionNum).catch(err => {
             console.error(`Upload Q${questionNum} failed:`, err);
         });
     }
-
-    // Hide playback container
-    const playbackContainer = document.getElementById('playbackContainer' + questionNum);
-    if (playbackContainer) playbackContainer.style.display = 'none';
 
     // Move to next question or complete test
     if (questionNum < 5) {
@@ -720,21 +699,15 @@ function repeatVideo(questionNumber) {
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
 
         // Reset UI elements
-        const statusLabel = document.getElementById('statusLabel' + questionNumber);
         const startBtn = document.getElementById('startRecordBtn' + questionNumber);
         const stopBtn = document.getElementById('stopRecordBtn' + questionNumber);
-        const playbackContainer = document.getElementById('playbackContainer' + questionNumber);
 
-        // Reset label
-        if (statusLabel) {
-            statusLabel.textContent = '🎧 Listen to question...';
-            statusLabel.className = 'response-preview-label listening';
+        // Reset buttons - disable start button until video ends
+        if (startBtn) {
+            startBtn.style.display = 'inline-block';
+            startBtn.disabled = true;
         }
-
-        // Hide all recording controls
-        if (startBtn) startBtn.style.display = 'none';
         if (stopBtn) stopBtn.style.display = 'none';
-        if (playbackContainer) playbackContainer.style.display = 'none';
 
         // Clear any recorded blob
         delete recordedBlobs[questionNumber];
@@ -746,12 +719,12 @@ function repeatVideo(questionNumber) {
             });
         }
 
-        // Play video and show start button when it ends
+        // Play video and enable start button when it ends
         const video = document.getElementById('video' + questionNumber);
         if (video) {
             video.currentTime = 0;
 
-            // When video ends, show start recording button
+            // When video ends, enable start recording button
             video.onended = () => {
                 startRecordingCountdown(questionNumber);
             };
