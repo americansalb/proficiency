@@ -344,52 +344,6 @@
             color: #c0392b;
         }
 
-        .upload-indicator {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #0d7377 0%, #14FFEC 100%);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 16px;
-            display: none;
-            align-items: center;
-            gap: 12px;
-            z-index: 9999;
-            box-shadow: 0 4px 20px rgba(13, 115, 119, 0.4);
-            animation: slideInUp 0.3s ease-out;
-        }
-
-        .upload-indicator.active {
-            display: flex;
-        }
-
-        @keyframes slideInUp {
-            from {
-                transform: translateY(100px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .upload-spinner {
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top: 3px solid white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
@@ -398,12 +352,6 @@
         <div class="recording-dot"></div>
         <span>● REC - YOU ARE BEING RECORDED</span>
         <div class="recording-dot"></div>
-    </div>
-
-    <!-- UPLOAD PROGRESS INDICATOR -->
-    <div class="upload-indicator" id="uploadIndicator">
-        <div class="upload-spinner"></div>
-        <span id="uploadText">Uploading your response...</span>
     </div>
 
     <div class="container">
