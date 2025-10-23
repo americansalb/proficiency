@@ -106,24 +106,13 @@
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             background: #000;
-            position: relative;
         }
 
-        .video-container iframe {
+        .video-container video {
             width: 100%;
             height: 450px;
-            border: none;
+            object-fit: contain;
             display: block;
-        }
-
-        .video-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            cursor: default;
         }
 
         .instructions-box {
@@ -263,21 +252,24 @@
             font-size: 14px;
         }
 
+        /* SUPER PROMINENT RECORDING INDICATOR */
         .recording-indicator {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #e74c3c;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
             color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
+            padding: 20px;
             font-weight: bold;
+            font-size: 24px;
             display: none;
             align-items: center;
-            gap: 10px;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            animation: pulse 2s infinite;
+            justify-content: center;
+            gap: 15px;
+            z-index: 10000;
+            box-shadow: 0 4px 20px rgba(231, 76, 60, 0.5);
+            border-bottom: 4px solid #fff;
         }
 
         .recording-indicator.active {
@@ -285,21 +277,16 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
         }
 
         .recording-dot {
-            width: 12px;
-            height: 12px;
+            width: 20px;
+            height: 20px;
             background: white;
             border-radius: 50%;
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
+            animation: pulse 1.5s infinite;
         }
 
         .camera-permission {
@@ -313,6 +300,68 @@
         .camera-permission h3 {
             color: #856404;
             margin-bottom: 10px;
+        }
+
+        /* PREVIEW PAGE STYLES */
+        .preview-container {
+            margin: 30px 0;
+        }
+
+        .preview-video {
+            width: 100%;
+            max-width: 640px;
+            height: 480px;
+            background: #000;
+            border-radius: 8px;
+            margin: 20px auto;
+            display: block;
+        }
+
+        .audio-meter {
+            width: 100%;
+            max-width: 640px;
+            height: 60px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            margin: 20px auto;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #0d7377;
+        }
+
+        .audio-level {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60 0%, #f39c12 70%, #e74c3c 100%);
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .audio-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            color: #333;
+            z-index: 1;
+        }
+
+        .preview-status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 600;
+        }
+
+        .preview-status.success {
+            background: #d4edda;
+            color: #27ae60;
+        }
+
+        .preview-status.error {
+            background: #fadbd8;
+            color: #c0392b;
         }
 
         .loading-spinner {
@@ -336,12 +385,13 @@
             padding: 20px;
         }
     </style>
-    <script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
+    <!-- SUPER OBVIOUS RECORDING INDICATOR -->
     <div class="recording-indicator" id="recordingIndicator">
         <div class="recording-dot"></div>
-        <span>Recording</span>
+        <span>● REC - YOU ARE BEING RECORDED</span>
+        <div class="recording-dot"></div>
     </div>
 
     <div class="container">
@@ -369,11 +419,6 @@
         <div class="page" id="page2">
             <h1>English Proficiency Test Instructions</h1>
             
-            <div class="video-container">
-                <div id="instructionsPlayer"></div>
-                <div class="video-overlay"></div>
-            </div>
-
             <div class="instructions-box">
                 <ol>
                     <li>You will listen carefully to questions you're asked in English, and you will respond to them, also in English.</li>
@@ -433,19 +478,46 @@
                 placeholder="Type your full name as electronic signature">
 
             <div class="center">
-                <button class="button" id="beginBtn" onclick="validateAndBegin()">Begin Question #1</button>
+                <button class="button" id="beginBtn" onclick="validateAndTestEquipment()">Test Camera & Microphone</button>
             </div>
         </div>
 
-        <!-- Pages 4-8: Questions 1-5 -->
+        <!-- Page 4: NEW - Camera/Mic Test Page -->
         <div class="page" id="page4">
+            <h1>Test Your Equipment</h1>
+            
+            <p style="text-align: center; margin: 20px 0;">
+                Make sure your camera and microphone are working before starting the test.
+            </p>
+
+            <div class="preview-container">
+                <video id="previewVideo" class="preview-video" autoplay muted playsinline></video>
+                
+                <div class="audio-meter">
+                    <div class="audio-level" id="audioLevel"></div>
+                    <div class="audio-label">🎤 Speak to test microphone</div>
+                </div>
+
+                <div class="preview-status" id="previewStatus"></div>
+            </div>
+
+            <div class="center">
+                <button class="button" onclick="startTest()">Equipment Looks Good - Start Test</button>
+            </div>
+        </div>
+
+        <!-- Pages 5-9: Questions 1-5 -->
+        <div class="page" id="page5">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 1 of 5</h2>
             </div>
             
             <div class="video-container">
-                <div id="player1"></div>
-                <div class="video-overlay"></div>
+                <video id="video1" controls controlsList="nodownload" disablePictureInPicture>
+                    <source src="videos/question1.mp4" type="video/mp4">
+                    <source src="videos/question1.webm" type="video/webm">
+                    Your browser does not support the video tag.
+                </video>
             </div>
 
             <div class="center">
@@ -456,18 +528,21 @@
             </div>
 
             <div class="center">
-                <button class="button" onclick="goToPage(5)">Next Question</button>
+                <button class="button" onclick="goToPage(6)">Next Question</button>
             </div>
         </div>
 
-        <div class="page" id="page5">
+        <div class="page" id="page6">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 2 of 5</h2>
             </div>
             
             <div class="video-container">
-                <div id="player2"></div>
-                <div class="video-overlay"></div>
+                <video id="video2" controls controlsList="nodownload" disablePictureInPicture>
+                    <source src="videos/question2.mp4" type="video/mp4">
+                    <source src="videos/question2.webm" type="video/webm">
+                    Your browser does not support the video tag.
+                </video>
             </div>
 
             <div class="center">
@@ -478,18 +553,21 @@
             </div>
 
             <div class="center">
-                <button class="button" onclick="goToPage(6)">Next Question</button>
+                <button class="button" onclick="goToPage(7)">Next Question</button>
             </div>
         </div>
 
-        <div class="page" id="page6">
+        <div class="page" id="page7">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 3 of 5</h2>
             </div>
             
             <div class="video-container">
-                <div id="player3"></div>
-                <div class="video-overlay"></div>
+                <video id="video3" controls controlsList="nodownload" disablePictureInPicture>
+                    <source src="videos/question3.mp4" type="video/mp4">
+                    <source src="videos/question3.webm" type="video/webm">
+                    Your browser does not support the video tag.
+                </video>
             </div>
 
             <div class="center">
@@ -500,18 +578,21 @@
             </div>
 
             <div class="center">
-                <button class="button" onclick="goToPage(7)">Next Question</button>
+                <button class="button" onclick="goToPage(8)">Next Question</button>
             </div>
         </div>
 
-        <div class="page" id="page7">
+        <div class="page" id="page8">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 4 of 5</h2>
             </div>
             
             <div class="video-container">
-                <div id="player4"></div>
-                <div class="video-overlay"></div>
+                <video id="video4" controls controlsList="nodownload" disablePictureInPicture>
+                    <source src="videos/question4.mp4" type="video/mp4">
+                    <source src="videos/question4.webm" type="video/webm">
+                    Your browser does not support the video tag.
+                </video>
             </div>
 
             <div class="center">
@@ -522,18 +603,21 @@
             </div>
 
             <div class="center">
-                <button class="button" onclick="goToPage(8)">Next Question</button>
+                <button class="button" onclick="goToPage(9)">Next Question</button>
             </div>
         </div>
 
-        <div class="page" id="page8">
+        <div class="page" id="page9">
             <div class="question-header">
                 <h2 style="color: white; margin: 0;">Question 5 of 5</h2>
             </div>
             
             <div class="video-container">
-                <div id="player5"></div>
-                <div class="video-overlay"></div>
+                <video id="video5" controls controlsList="nodownload" disablePictureInPicture>
+                    <source src="videos/question5.mp4" type="video/mp4">
+                    <source src="videos/question5.webm" type="video/webm">
+                    Your browser does not support the video tag.
+                </video>
             </div>
 
             <div class="center">
@@ -548,8 +632,8 @@
             </div>
         </div>
 
-        <!-- Page 9: Upload Progress -->
-        <div class="page" id="page9">
+        <!-- Page 10: Upload Progress -->
+        <div class="page" id="page10">
             <h1>Uploading Your Recording</h1>
             <div class="upload-status">
                 <div class="loading-spinner" id="uploadSpinner"></div>
@@ -563,8 +647,8 @@
             </div>
         </div>
 
-        <!-- Page 10: Completion -->
-        <div class="page" id="page10">
+        <!-- Page 11: Completion -->
+        <div class="page" id="page11">
             <h1>Test Complete</h1>
             <p class="center" style="margin: 40px 0; font-size: 18px;">
                 Thank you for completing the English Proficiency Screening!
