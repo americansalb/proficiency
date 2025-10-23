@@ -46,12 +46,20 @@ async function goToPage(pageNumber) {
     try {
         const previousPage = currentPage;
 
-        // If leaving a question page (5-9), mark question as finished (non-blocking)
+        // If leaving a question page (5-9), stop and upload that question
         if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
             const questionNum = previousPage - 4;
-            // Non-blocking - just marks boundary and queues upload
+            // Stop and upload the previous question's recording
             if (window.recordingManager) {
-                window.recordingManager.finishQuestion(questionNum);
+                try {
+                    const blob = await window.recordingManager.stopQuestionRecording();
+                    // Upload in background (don't wait)
+                    window.recordingManager.uploadQuestionRecording(blob).catch(err => {
+                        console.error(`Background upload failed for Q${questionNum}:`, err);
+                    });
+                } catch (err) {
+                    console.error(`Error stopping recording for Q${questionNum}:`, err);
+                }
             }
         }
 
@@ -345,31 +353,29 @@ async function completeTest() {
         // Stop all videos
         stopAllVideos();
 
-        // Mark Question 5 as finished (queues upload)
-        if (window.recordingManager) {
-            window.recordingManager.finishQuestion(5);
-        }
-
         // Show upload page
         currentPage = 10;
         document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
         document.getElementById('page10').classList.add('active');
         document.getElementById('uploadSpinner').style.display = 'block';
-        document.getElementById('uploadMessage').textContent = 'Finalizing your recording...';
+        document.getElementById('uploadMessage').textContent = 'Uploading your recording...';
 
-        // Stop recording and wait for all background uploads to complete
+        // Stop recording for Question 5 and upload
         if (window.recordingManager) {
-            await window.recordingManager.stopAndUploadAll();
+            const blob = await window.recordingManager.stopQuestionRecording();
+            await window.recordingManager.uploadQuestionRecording(blob);
         }
 
         // Show success
         document.getElementById('uploadSpinner').style.display = 'none';
         document.getElementById('uploadSuccess').style.display = 'block';
-        document.getElementById('uploadMessage').textContent = 'All recordings uploaded successfully!';
+        document.getElementById('uploadMessage').textContent = 'Recording uploaded successfully!';
 
         // Wait 2 seconds then show completion
         setTimeout(() => {
-            window.recordingManager.stopAllRecording();
+            if (window.recordingManager) {
+                window.recordingManager.stopAllRecording();
+            }
             currentPage = 11;
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
             document.getElementById('page11').classList.add('active');
@@ -379,7 +385,7 @@ async function completeTest() {
         console.error('Error completing test:', error);
         document.getElementById('uploadSpinner').style.display = 'none';
         document.getElementById('uploadError').style.display = 'block';
-        document.getElementById('uploadMessage').textContent = 'Some uploads may have failed. Please contact support.';
+        document.getElementById('uploadMessage').textContent = 'Upload failed. Please contact support.';
     } finally {
         isChangingPage = false;
     }

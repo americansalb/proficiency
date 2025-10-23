@@ -252,24 +252,23 @@
             font-size: 14px;
         }
 
-        /* SUPER PROMINENT RECORDING INDICATOR */
+        /* RECORDING INDICATOR */
         .recording-indicator {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            background: #e74c3c;
             color: white;
-            padding: 15px 20px;
-            font-weight: bold;
-            font-size: 20px;
+            padding: 8px 15px;
+            font-weight: 600;
+            font-size: 14px;
             display: none;
             align-items: center;
             justify-content: center;
-            gap: 20px;
+            gap: 10px;
             z-index: 10000;
-            box-shadow: 0 4px 20px rgba(231, 76, 60, 0.5);
-            border-bottom: 4px solid #fff;
+            box-shadow: 0 2px 10px rgba(231, 76, 60, 0.3);
         }
 
         .recording-indicator.active {
@@ -282,8 +281,8 @@
         }
 
         .recording-dot {
-            width: 16px;
-            height: 16px;
+            width: 10px;
+            height: 10px;
             background: white;
             border-radius: 50%;
             animation: pulse 1.5s infinite;
@@ -291,9 +290,9 @@
 
         .recording-icons {
             display: flex;
-            gap: 15px;
+            gap: 8px;
             align-items: center;
-            font-size: 28px;
+            font-size: 16px;
         }
 
         .camera-permission {
