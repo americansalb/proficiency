@@ -9,6 +9,7 @@ const repeatCounts = {
 
 // Current page tracker
 let currentPage = 1;
+let isChangingPage = false; // Prevent double-clicks
 
 // Preview stream for equipment test
 let previewStream = null;
@@ -27,50 +28,69 @@ function stopAllVideos() {
 }
 
 async function goToPage(pageNumber) {
-    const previousPage = currentPage;
-    
-    // If leaving a question page (5-9), stop and upload that question FIRST
-    if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
-        const questionNum = previousPage - 4;
-        await stopAndUploadQuestion(questionNum);
+    // Prevent concurrent calls
+    if (isChangingPage) {
+        console.log('Already changing pages, ignoring...');
+        return;
     }
     
-    // Stop all videos before changing pages
-    stopAllVideos();
+    isChangingPage = true;
     
-    // Hide all pages
-    document.querySelectorAll('.page').forEach(page => {
-        page.classList.remove('active');
-    });
-    
-    // Show target page
-    document.getElementById('page' + pageNumber).classList.add('active');
-    currentPage = pageNumber;
-    
-    // Auto-play video if it's a question page (5-9)
-    if (pageNumber >= 5 && pageNumber <= 9) {
-        const questionNum = pageNumber - 4;
-        const video = document.getElementById('video' + questionNum);
-        if (video) {
-            setTimeout(() => {
-                video.currentTime = 0;
-                video.play();
-            }, 500);
+    try {
+        const previousPage = currentPage;
+        
+        // If leaving a question page (5-9), stop and upload that question FIRST
+        if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
+            const questionNum = previousPage - 4;
+            await stopAndUploadQuestion(questionNum);
         }
         
-        // Start recording for this NEW question
-        if (window.recordingManager) {
-            window.recordingManager.startQuestionRecording(questionNum);
+        // Stop all videos before changing pages
+        stopAllVideos();
+        
+        // Hide all pages
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.remove('active');
+        });
+        
+        // Show target page
+        document.getElementById('page' + pageNumber).classList.add('active');
+        currentPage = pageNumber;
+        
+        // Auto-play video if it's a question page (5-9)
+        if (pageNumber >= 5 && pageNumber <= 9) {
+            const questionNum = pageNumber - 4;
+            const video = document.getElementById('video' + questionNum);
+            if (video) {
+                setTimeout(() => {
+                    video.currentTime = 0;
+                    video.play();
+                }, 500);
+            }
+            
+            // Start recording for this NEW question
+            if (window.recordingManager) {
+                setTimeout(() => {
+                    window.recordingManager.startQuestionRecording(questionNum);
+                }, 100);
+            }
         }
+        
+        // Scroll to top
+        window.scrollTo(0, 0);
+    } finally {
+        setTimeout(() => {
+            isChangingPage = false;
+        }, 500);
     }
-    
-    // Scroll to top
-    window.scrollTo(0, 0);
 }
 
 async function stopAndUploadQuestion(questionNum) {
     try {
         console.log(`Stopping and uploading question ${questionNum}...`);
+        
+        // Show upload overlay
+        document.getElementById('uploadOverlay').classList.add('active');
         
         // Stop recording
         const blob = await window.recordingManager.stopQuestionRecording();
@@ -79,9 +99,19 @@ async function stopAndUploadQuestion(questionNum) {
         await window.recordingManager.uploadQuestionRecording(blob);
         
         console.log(`Question ${questionNum} uploaded successfully!`);
+        
+        // Hide upload overlay
+        document.getElementById('uploadOverlay').classList.remove('active');
     } catch (error) {
+        // Hide upload overlay on error
+        document.getElementById('uploadOverlay').classList.remove('active');
+        
         console.error(`Error uploading question ${questionNum}:`, error);
-        alert(`Warning: Question ${questionNum} upload failed. Please contact support.`);
+        
+        // Only show alert for questions 1-4, not Q5
+        if (questionNum < 5) {
+            alert(`Warning: Question ${questionNum} upload failed. Please contact support.`);
+        }
     }
 }
 
@@ -286,17 +316,27 @@ function repeatVideo(questionNumber) {
 }
 
 async function completeTest() {
-    // Stop all videos
-    stopAllVideos();
+    // Prevent double-clicks
+    if (isChangingPage) return;
+    isChangingPage = true;
     
-    // Stop and upload the last question (Question 5)
-    await stopAndUploadQuestion(5);
-    
-    // Stop all recording completely
-    window.recordingManager.stopAllRecording();
-    
-    // Go to completion page
-    goToPage(11);
+    try {
+        // Stop all videos
+        stopAllVideos();
+        
+        // Stop and upload the last question (Question 5)
+        await stopAndUploadQuestion(5);
+        
+        // Stop all recording completely
+        window.recordingManager.stopAllRecording();
+        
+        // Go to completion page
+        currentPage = 11;
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        document.getElementById('page11').classList.add('active');
+    } finally {
+        isChangingPage = false;
+    }
 }
 
 // Allow Enter key to submit passcode
