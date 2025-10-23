@@ -1,16 +1,3 @@
-// Video ID mapping (replace these with your actual video IDs)
-const videoIds = {
-    instructions: '3WYNhilLu4g',
-    1: '3WYNhilLu4g',
-    2: '3WYNhilLu4g',
-    3: '3WYNhilLu4g',
-    4: '3WYNhilLu4g',
-    5: '3WYNhilLu4g'
-};
-
-// YouTube player objects
-const players = {};
-
 // Track repeat counts for each question
 const repeatCounts = {
     1: 2,
@@ -23,51 +10,18 @@ const repeatCounts = {
 // Current page tracker
 let currentPage = 1;
 
-// YouTube API Ready
-function onYouTubeIframeAPIReady() {
-    // Initialize instructions player
-    players.instructions = new YT.Player('instructionsPlayer', {
-        height: '450',
-        width: '100%',
-        videoId: videoIds.instructions,
-        playerVars: {
-            'autoplay': 1,
-            'controls': 0,
-            'modestbranding': 1,
-            'rel': 0,
-            'fs': 0,
-            'disablekb': 1
-        }
-    });
-
-    // Initialize question players
-    for (let i = 1; i <= 5; i++) {
-        players[i] = new YT.Player('player' + i, {
-            height: '450',
-            width: '100%',
-            videoId: videoIds[i],
-            playerVars: {
-                'autoplay': 1,
-                'controls': 0,
-                'modestbranding': 1,
-                'rel': 0,
-                'fs': 0,
-                'disablekb': 1
-            }
-        });
-    }
-}
+// Preview stream for equipment test
+let previewStream = null;
+let audioContext = null;
+let audioAnalyser = null;
 
 function stopAllVideos() {
-    // Stop instructions video
-    if (players.instructions && players.instructions.pauseVideo) {
-        players.instructions.pauseVideo();
-    }
-    
     // Stop all question videos
     for (let i = 1; i <= 5; i++) {
-        if (players[i] && players[i].pauseVideo) {
-            players[i].pauseVideo();
+        const video = document.getElementById('video' + i);
+        if (video) {
+            video.pause();
+            video.currentTime = 0;
         }
     }
 }
@@ -85,19 +39,17 @@ function goToPage(pageNumber) {
     document.getElementById('page' + pageNumber).classList.add('active');
     currentPage = pageNumber;
     
-    // Auto-play video if it's page 2 or a question page (4-8)
-    setTimeout(() => {
-        if (pageNumber === 2 && players.instructions && players.instructions.playVideo) {
-            players.instructions.seekTo(0);
-            players.instructions.playVideo();
-        } else if (pageNumber >= 4 && pageNumber <= 8) {
-            const questionNum = pageNumber - 3;
-            if (players[questionNum] && players[questionNum].playVideo) {
-                players[questionNum].seekTo(0);
-                players[questionNum].playVideo();
-            }
+    // Auto-play video if it's a question page (5-9)
+    if (pageNumber >= 5 && pageNumber <= 9) {
+        const videoNum = pageNumber - 4;
+        const video = document.getElementById('video' + videoNum);
+        if (video) {
+            setTimeout(() => {
+                video.currentTime = 0;
+                video.play();
+            }, 500);
         }
-    }, 500);
+    }
     
     // Scroll to top
     window.scrollTo(0, 0);
@@ -118,7 +70,7 @@ function validatePasscode(passcode) {
     return num >= 1089100800000 && num <= 1089100899999;
 }
 
-async function validateAndBegin() {
+async function validateAndTestEquipment() {
     const passcode = document.getElementById('passcodeInput').value;
     const check1 = document.getElementById('check1').checked;
     const check2 = document.getElementById('check2').checked;
@@ -151,30 +103,134 @@ async function validateAndBegin() {
     // All validation passed
     errorMsg.style.display = 'none';
     
-    // Request camera/microphone permissions
+    // Store credentials for later
+    window.testCredentials = {
+        fullName: fullName,
+        passcode: passcode
+    };
+    
+    // Go to equipment test page
+    goToPage(4);
+    
+    // Start equipment test
+    setTimeout(() => {
+        setupEquipmentTest();
+    }, 500);
+}
+
+async function setupEquipmentTest() {
+    const previewVideo = document.getElementById('previewVideo');
+    const audioLevel = document.getElementById('audioLevel');
+    const previewStatus = document.getElementById('previewStatus');
+
+    try {
+        // Request camera and microphone access
+        previewStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            },
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 44100
+            }
+        });
+
+        // Show video preview
+        previewVideo.srcObject = previewStream;
+        
+        // Setup audio level detection
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioSource = audioContext.createMediaStreamSource(previewStream);
+        audioAnalyser = audioContext.createAnalyser();
+        audioAnalyser.fftSize = 256;
+        audioSource.connect(audioAnalyser);
+        
+        // Start audio level monitoring
+        updateAudioLevel();
+        
+        // Show success message
+        previewStatus.className = 'preview-status success';
+        previewStatus.textContent = '✓ Camera and microphone are working!';
+        previewStatus.style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error accessing media devices:', error);
+        previewStatus.className = 'preview-status error';
+        previewStatus.textContent = '✗ Unable to access camera/microphone. Please grant permissions and try again.';
+        previewStatus.style.display = 'block';
+    }
+}
+
+function updateAudioLevel() {
+    if (!audioAnalyser) return;
+    
+    const audioLevel = document.getElementById('audioLevel');
+    const dataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+    
+    function animate() {
+        if (!audioAnalyser) return;
+        
+        audioAnalyser.getByteFrequencyData(dataArray);
+        
+        // Calculate average volume
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+        }
+        const average = sum / dataArray.length;
+        
+        // Update audio level bar (0-100%)
+        const percentage = Math.min(100, (average / 128) * 100);
+        audioLevel.style.width = percentage + '%';
+        
+        requestAnimationFrame(animate);
+    }
+    
+    animate();
+}
+
+async function startTest() {
+    // Stop preview stream
+    if (previewStream) {
+        previewStream.getTracks().forEach(track => track.stop());
+        previewStream = null;
+    }
+    
+    // Stop audio context
+    if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+        audioAnalyser = null;
+    }
+    
+    // Request permissions again for recording
     const permissionGranted = await window.recordingManager.requestPermissions();
     
     if (!permissionGranted) {
-        errorMsg.style.display = 'block';
-        errorMsg.textContent = 'Camera and microphone access is required to proceed.';
+        alert('Camera and microphone access is required to proceed.');
         return;
     }
 
-    // Start recording
-    const recordingStarted = window.recordingManager.startRecording(fullName, passcode);
+    // Start recording with stored credentials
+    const recordingStarted = window.recordingManager.startRecording(
+        window.testCredentials.fullName, 
+        window.testCredentials.passcode
+    );
     
     if (!recordingStarted) {
-        errorMsg.style.display = 'block';
-        errorMsg.textContent = 'Failed to start recording. Please try again.';
+        alert('Failed to start recording. Please try again.');
         return;
     }
 
     // Log the start
     console.log('Test started at:', new Date().toISOString());
-    console.log('Participant:', fullName);
-    console.log('Passcode:', passcode);
+    console.log('Participant:', window.testCredentials.fullName);
+    console.log('Passcode:', window.testCredentials.passcode);
     
-    goToPage(4);
+    // Go to first question (now page 5)
+    goToPage(5);
 }
 
 function repeatVideo(questionNumber) {
@@ -185,10 +241,11 @@ function repeatVideo(questionNumber) {
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
         
-        // Replay the video using YouTube API
-        if (players[questionNumber] && players[questionNumber].seekTo) {
-            players[questionNumber].seekTo(0);
-            players[questionNumber].playVideo();
+        // Replay the video
+        const video = document.getElementById('video' + questionNumber);
+        if (video) {
+            video.currentTime = 0;
+            video.play();
         }
         
         // Disable button if no repeats left
@@ -201,8 +258,11 @@ function repeatVideo(questionNumber) {
 }
 
 async function completeTest() {
-    // Stop recording
-    goToPage(9);
+    // Stop all videos
+    stopAllVideos();
+    
+    // Go to upload page (now page 10)
+    goToPage(10);
     document.getElementById('uploadSpinner').style.display = 'block';
     
     try {
@@ -223,9 +283,9 @@ async function completeTest() {
             document.getElementById('uploadMessage').textContent = 'Your test has been submitted successfully!';
         }
         
-        // Go to completion page after 2 seconds
+        // Go to completion page after 2 seconds (now page 11)
         setTimeout(() => {
-            goToPage(10);
+            goToPage(11);
         }, 2000);
         
     } catch (error) {
@@ -242,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (passcodeInput) {
         passcodeInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                validateAndBegin();
+                validateAndTestEquipment();
             }
         });
     }
@@ -251,6 +311,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // Stop videos when user leaves the page
 window.addEventListener('beforeunload', function() {
     stopAllVideos();
+    
+    // Stop preview if active
+    if (previewStream) {
+        previewStream.getTracks().forEach(track => track.stop());
+    }
+    
     if (window.recordingManager && window.recordingManager.isRecording) {
         // Try to save recording if user leaves mid-test
         window.recordingManager.stopRecording().catch(console.error);
