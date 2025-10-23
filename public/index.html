@@ -101,16 +101,17 @@
         }
 
         .video-container {
-            margin: 30px 0;
+            margin: 15px auto;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             background: #000;
+            max-width: 500px;
         }
 
         .video-container video {
             width: 100%;
-            height: 450px;
+            height: 300px;
             object-fit: contain;
             display: block;
         }
@@ -560,28 +561,26 @@
 
         /* RESPONSE PREVIEW (camera during recording) */
         .response-preview {
-            display: none;
-            margin: 20px auto;
-            max-width: 600px;
-        }
-
-        .response-preview.active {
             display: block;
+            margin: 15px auto;
+            max-width: 400px;
         }
 
         .response-preview video {
             width: 100%;
+            height: 250px;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.2);
             background: #000;
+            object-fit: cover;
         }
 
         .response-preview-label {
             text-align: center;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             color: #27ae60;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         .done-button {
@@ -589,13 +588,13 @@
             background: #27ae60;
             color: white;
             border: none;
-            padding: 20px 50px;
-            font-size: 20px;
+            padding: 15px 40px;
+            font-size: 18px;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s;
             font-weight: 700;
-            margin: 30px auto;
+            margin: 15px auto;
         }
 
         .done-button.active {

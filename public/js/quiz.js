@@ -182,14 +182,27 @@ async function goToPage(pageNumber) {
         if (pageNumber >= 6 && pageNumber <= 10) {
             const questionNum = pageNumber - 5;
 
-            // Hide preview and done button when entering question page
-            const previewContainer = document.getElementById('responsePreview' + questionNum);
+            // Hide done button when entering question page
             const doneButton = document.getElementById('doneButton' + questionNum);
-            if (previewContainer) {
-                previewContainer.classList.remove('active');
-            }
             if (doneButton) {
                 doneButton.classList.remove('active');
+            }
+
+            // Show preview immediately with "Listen to question..." label
+            const previewLabel = document.querySelector(`#responsePreview${questionNum} .response-preview-label`);
+            const previewVideo = document.getElementById('previewStream' + questionNum);
+
+            if (previewLabel) {
+                previewLabel.textContent = '🎧 Listen to question...';
+            }
+
+            // Connect camera stream to preview immediately
+            if (window.recordingManager) {
+                window.recordingManager.requestPermissions().then(() => {
+                    if (window.recordingManager.stream && previewVideo) {
+                        previewVideo.srcObject = window.recordingManager.stream;
+                    }
+                });
             }
 
             // Reset repeat button and counter display for this question
@@ -255,19 +268,15 @@ function startRecordingCountdown(questionNum) {
             if (window.recordingManager) {
                 window.recordingManager.startQuestionRecording(questionNum);
 
-                // Show camera preview with recording stream
-                const previewContainer = document.getElementById('responsePreview' + questionNum);
-                const previewVideo = document.getElementById('previewStream' + questionNum);
+                // Update label to "Provide your response" and show done button
+                const previewLabel = document.querySelector(`#responsePreview${questionNum} .response-preview-label`);
                 const doneButton = document.getElementById('doneButton' + questionNum);
 
-                if (previewContainer && previewVideo && doneButton) {
-                    // Connect preview to recording stream
-                    if (window.recordingManager.stream) {
-                        previewVideo.srcObject = window.recordingManager.stream;
-                    }
+                if (previewLabel) {
+                    previewLabel.textContent = '🎤 Provide your response';
+                }
 
-                    // Show preview and done button
-                    previewContainer.classList.add('active');
+                if (doneButton) {
                     doneButton.classList.add('active');
                 }
             }
@@ -283,13 +292,9 @@ async function finishQuestion(nextPage) {
 
     const questionNum = currentPage - 5; // Current question number (1-5)
 
-    // Hide preview and done button for current question
-    const previewContainer = document.getElementById('responsePreview' + questionNum);
+    // Hide done button for current question
     const doneButton = document.getElementById('doneButton' + questionNum);
 
-    if (previewContainer) {
-        previewContainer.classList.remove('active');
-    }
     if (doneButton) {
         doneButton.classList.remove('active');
     }
@@ -624,11 +629,12 @@ function repeatVideo(questionNumber) {
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
 
-        // Hide preview and done button while replaying video
-        const previewContainer = document.getElementById('responsePreview' + questionNumber);
+        // Reset label to "Listen to question..." and hide done button
+        const previewLabel = document.querySelector(`#responsePreview${questionNumber} .response-preview-label`);
         const doneButton = document.getElementById('doneButton' + questionNumber);
-        if (previewContainer) {
-            previewContainer.classList.remove('active');
+
+        if (previewLabel) {
+            previewLabel.textContent = '🎧 Listen to question...';
         }
         if (doneButton) {
             doneButton.classList.remove('active');
