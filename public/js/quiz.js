@@ -24,7 +24,16 @@ function stopAllVideos() {
         videoInstructions.currentTime = 0;
     }
 
-    // Stop question videos (Q1 is iframe, Q2-5 are videos)
+    // Stop Question 1 iframe by reloading it with empty src
+    const iframe1 = document.getElementById('iframe1');
+    if (iframe1) {
+        const originalSrc = iframe1.src;
+        iframe1.src = 'about:blank';
+        // Store original src for later replay if needed
+        iframe1.dataset.originalSrc = originalSrc;
+    }
+
+    // Stop question videos (Q2-5 are videos)
     for (let i = 2; i <= 5; i++) {
         const video = document.getElementById('video' + i);
         if (video) {
@@ -100,7 +109,19 @@ async function goToPage(pageNumber) {
                 window.recordingManager.startQuestionRecording(questionNum);
             }
 
-            // Question 1 uses iframe (will autoplay automatically)
+            // Question 1 uses iframe - restore src to make it play
+            if (questionNum === 1) {
+                setTimeout(() => {
+                    const iframe1 = document.getElementById('iframe1');
+                    if (iframe1 && iframe1.dataset.originalSrc) {
+                        iframe1.src = iframe1.dataset.originalSrc;
+                    } else if (iframe1) {
+                        // First time loading
+                        iframe1.dataset.originalSrc = iframe1.src;
+                    }
+                }, 300);
+            }
+
             // Questions 2-5 use video tags (play them)
             if (questionNum > 1) {
                 setTimeout(() => {
@@ -310,8 +331,11 @@ function repeatVideo(questionNumber) {
             // Question 1 uses iframe - reload it to restart
             const iframe = document.getElementById('iframe1');
             if (iframe) {
-                const src = iframe.src;
-                iframe.src = src;
+                const originalSrc = iframe.dataset.originalSrc || iframe.src;
+                iframe.src = 'about:blank';
+                setTimeout(() => {
+                    iframe.src = originalSrc;
+                }, 100);
             }
         } else {
             // Questions 2-5 use video tags
