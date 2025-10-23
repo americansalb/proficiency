@@ -26,7 +26,9 @@ function stopAllVideos() {
     }
 }
 
-function goToPage(pageNumber) {
+async function goToPage(pageNumber) {
+    const previousPage = currentPage;
+    
     // Stop all videos before changing pages
     stopAllVideos();
     
@@ -41,18 +43,46 @@ function goToPage(pageNumber) {
     
     // Auto-play video if it's a question page (5-9)
     if (pageNumber >= 5 && pageNumber <= 9) {
-        const videoNum = pageNumber - 4;
-        const video = document.getElementById('video' + videoNum);
+        const questionNum = pageNumber - 4;
+        const video = document.getElementById('video' + questionNum);
         if (video) {
             setTimeout(() => {
                 video.currentTime = 0;
                 video.play();
             }, 500);
         }
+        
+        // Start recording for this question
+        if (window.recordingManager) {
+            window.recordingManager.startQuestionRecording(questionNum);
+        }
+    }
+    
+    // If leaving a question page (5-9), stop and upload that question
+    if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
+        const questionNum = previousPage - 4;
+        await stopAndUploadQuestion(questionNum);
     }
     
     // Scroll to top
     window.scrollTo(0, 0);
+}
+
+async function stopAndUploadQuestion(questionNum) {
+    try {
+        console.log(`Stopping and uploading question ${questionNum}...`);
+        
+        // Stop recording
+        const blob = await window.recordingManager.stopQuestionRecording();
+        
+        // Upload immediately
+        await window.recordingManager.uploadQuestionRecording(blob);
+        
+        console.log(`Question ${questionNum} uploaded successfully!`);
+    } catch (error) {
+        console.error(`Error uploading question ${questionNum}:`, error);
+        alert(`Warning: Question ${questionNum} upload failed. Please contact support.`);
+    }
 }
 
 function validatePasscode(passcode) {
@@ -76,7 +106,8 @@ async function validateAndTestEquipment() {
     const check2 = document.getElementById('check2').checked;
     const check3 = document.getElementById('check3').checked;
     const check4 = document.getElementById('check4').checked;
-    const fullName = document.getElementById('fullName').value.trim();
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
     const errorMsg = document.getElementById('passcodeError');
 
     // Validate passcode
@@ -93,10 +124,10 @@ async function validateAndTestEquipment() {
         return;
     }
 
-    // Validate full name
-    if (fullName === '') {
+    // Validate names
+    if (firstName === '' || lastName === '') {
         errorMsg.style.display = 'block';
-        errorMsg.textContent = 'Please enter your full name as electronic signature.';
+        errorMsg.textContent = 'Please enter your first and last name.';
         return;
     }
 
@@ -105,7 +136,8 @@ async function validateAndTestEquipment() {
     
     // Store credentials for later
     window.testCredentials = {
-        fullName: fullName,
+        firstName: firstName,
+        lastName: lastName,
         passcode: passcode
     };
     
@@ -213,23 +245,19 @@ async function startTest() {
         return;
     }
 
-    // Start recording with stored credentials
-    const recordingStarted = window.recordingManager.startRecording(
-        window.testCredentials.fullName, 
+    // Set participant info
+    window.recordingManager.setParticipantInfo(
+        window.testCredentials.firstName, 
+        window.testCredentials.lastName,
         window.testCredentials.passcode
     );
-    
-    if (!recordingStarted) {
-        alert('Failed to start recording. Please try again.');
-        return;
-    }
 
     // Log the start
     console.log('Test started at:', new Date().toISOString());
-    console.log('Participant:', window.testCredentials.fullName);
+    console.log('Participant:', window.testCredentials.firstName, window.testCredentials.lastName);
     console.log('Passcode:', window.testCredentials.passcode);
     
-    // Go to first question (now page 5)
+    // Go to first question (page 5) - recording will start automatically
     goToPage(5);
 }
 
@@ -261,39 +289,14 @@ async function completeTest() {
     // Stop all videos
     stopAllVideos();
     
-    // Go to upload page (now page 10)
-    goToPage(10);
-    document.getElementById('uploadSpinner').style.display = 'block';
+    // Stop and upload the last question (Question 5)
+    await stopAndUploadQuestion(5);
     
-    try {
-        // Get both video and audio blobs
-        const { videoBlob, audioBlob } = await window.recordingManager.stopRecording();
-        console.log('Recording stopped, starting upload...');
-        
-        // Upload both recordings (audio first, then video)
-        const result = await window.recordingManager.uploadRecording(videoBlob, audioBlob);
-        
-        // Show success
-        document.getElementById('uploadSpinner').style.display = 'none';
-        document.getElementById('uploadSuccess').style.display = 'block';
-        
-        if (result.audioOnly) {
-            document.getElementById('uploadMessage').textContent = 'Audio uploaded successfully! (Video upload failed, but we have your audio recording)';
-        } else {
-            document.getElementById('uploadMessage').textContent = 'Your test has been submitted successfully!';
-        }
-        
-        // Go to completion page after 2 seconds (now page 11)
-        setTimeout(() => {
-            goToPage(11);
-        }, 2000);
-        
-    } catch (error) {
-        console.error('Error completing test:', error);
-        document.getElementById('uploadSpinner').style.display = 'none';
-        document.getElementById('uploadError').style.display = 'block';
-        document.getElementById('uploadMessage').textContent = 'There was an error uploading your recording.';
-    }
+    // Stop all recording completely
+    window.recordingManager.stopAllRecording();
+    
+    // Go to completion page
+    goToPage(11);
 }
 
 // Allow Enter key to submit passcode
@@ -317,8 +320,7 @@ window.addEventListener('beforeunload', function() {
         previewStream.getTracks().forEach(track => track.stop());
     }
     
-    if (window.recordingManager && window.recordingManager.isRecording) {
-        // Try to save recording if user leaves mid-test
-        window.recordingManager.stopRecording().catch(console.error);
+    if (window.recordingManager) {
+        window.recordingManager.stopAllRecording();
     }
 });
