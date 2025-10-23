@@ -502,6 +502,61 @@
             font-size: 18px;
             padding: 40px;
         }
+
+        /* RECORDING COUNTDOWN OVERLAY */
+        .recording-countdown {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 9999;
+        }
+
+        .recording-countdown.active {
+            display: flex;
+        }
+
+        .countdown-number {
+            font-size: 120px;
+            font-weight: bold;
+            color: white;
+            animation: countdownPulse 1s ease-in-out;
+        }
+
+        .countdown-text {
+            font-size: 24px;
+            color: white;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        @keyframes countdownPulse {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .speak-now-message {
+            background: #27ae60;
+            color: white;
+            padding: 20px 40px;
+            border-radius: 12px;
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            animation: speakNowPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes speakNowPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
     </style>
 </head>
 <body>
@@ -514,6 +569,13 @@
         </div>
         <span>RECORDING IN PROGRESS</span>
         <div class="recording-dot"></div>
+    </div>
+
+    <!-- RECORDING COUNTDOWN OVERLAY -->
+    <div class="recording-countdown" id="recordingCountdown">
+        <div id="countdownContent">
+            <!-- Will be filled dynamically -->
+        </div>
     </div>
 
     <div class="container">

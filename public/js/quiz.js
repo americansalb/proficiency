@@ -194,18 +194,21 @@ async function goToPage(pageNumber) {
             // Start timer for this question
             startTimer(questionNum);
 
-            // Start recording this question
-            if (window.recordingManager) {
-                window.recordingManager.startQuestionRecording(questionNum);
-            }
-
-            // All questions (Q1-5) use video tags now - play them
+            // Play video and setup countdown after video ends
             setTimeout(() => {
                 const video = document.getElementById('video' + questionNum);
                 if (video) {
                     video.currentTime = 0;
+
+                    // When video ends, show countdown then start recording
+                    video.onended = () => {
+                        startRecordingCountdown(questionNum);
+                    };
+
                     video.play().catch(err => {
                         console.log('Video autoplay prevented:', err);
+                        // If autoplay fails, start recording immediately
+                        startRecordingCountdown(questionNum);
                     });
                 }
             }, 300);
@@ -215,6 +218,46 @@ async function goToPage(pageNumber) {
             isChangingPage = false;
         }, 500);
     }
+}
+
+function startRecordingCountdown(questionNum) {
+    const countdownOverlay = document.getElementById('recordingCountdown');
+    const countdownContent = document.getElementById('countdownContent');
+
+    // Show countdown overlay
+    countdownOverlay.classList.add('active');
+
+    let count = 3;
+
+    function showNumber() {
+        if (count > 0) {
+            countdownContent.innerHTML = `
+                <div class="countdown-number">${count}</div>
+                <div class="countdown-text">Get ready to speak...</div>
+            `;
+            count--;
+            setTimeout(showNumber, 1000);
+        } else {
+            // Show "SPEAK NOW" message
+            countdownContent.innerHTML = `
+                <div class="speak-now-message">
+                    🎤 SPEAK NOW 🎤
+                </div>
+            `;
+
+            // Start recording
+            if (window.recordingManager) {
+                window.recordingManager.startQuestionRecording(questionNum);
+            }
+
+            // Hide countdown overlay after 2 seconds
+            setTimeout(() => {
+                countdownOverlay.classList.remove('active');
+            }, 2000);
+        }
+    }
+
+    showNumber();
 }
 
 async function validatePasscode(passcode) {
@@ -538,10 +581,23 @@ function repeatVideo(questionNumber) {
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
 
-        // All questions (Q1-5) use video tags now
+        // Stop current recording temporarily
+        const wasRecording = window.recordingManager?.isRecording;
+        if (wasRecording) {
+            // Pause recording by hiding the indicator (recording continues in background)
+            document.getElementById('recordingIndicator').classList.remove('active');
+        }
+
+        // Play video and show countdown when it ends
         const video = document.getElementById('video' + questionNumber);
         if (video) {
             video.currentTime = 0;
+
+            // When video ends, show countdown again
+            video.onended = () => {
+                startRecordingCountdown(questionNumber);
+            };
+
             video.play().catch(err => {
                 console.log('Video play prevented:', err);
             });
