@@ -371,10 +371,10 @@ function loadQuestionVideos(testType) {
     const videos = {
         'ENGLISH': {
             Q1: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q1_ENG_tk3fkm.mp4',
-            Q2: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200966/Q2_ENG_uyghxi.mp4',
-            Q3: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q3_ENG_u7iytb.mp4',
-            Q4: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q4_ENG_qjh7nj.mp4',
-            Q5: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q5_ENG_hmxjgr.mp4'
+            Q2: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234687/PROF_ENG_Q2_u5h77u.mp4',
+            Q3: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234753/PROF_ENG_Q3_hv0vo8.mp4',
+            Q4: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234803/PROF_ENG_Q4_hvcuft.mp4',
+            Q5: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234857/PROF_ENG_Q5_rswirk.mp4'
         },
         'NONENG': {
             Q1: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239799/PROF_NONENG_Q1_ggc672.mp4',
