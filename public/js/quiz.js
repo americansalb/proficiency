@@ -182,20 +182,23 @@ async function goToPage(pageNumber) {
         if (pageNumber >= 6 && pageNumber <= 10) {
             const questionNum = pageNumber - 5;
 
-            // Hide done button when entering question page
-            const doneButton = document.getElementById('doneButton' + questionNum);
-            if (doneButton) {
-                doneButton.classList.remove('active');
-            }
-
-            // Show preview immediately with "Listen to question..." label
+            // Reset all UI elements for this question
             const statusLabel = document.getElementById('statusLabel' + questionNum);
             const previewVideo = document.getElementById('previewStream' + questionNum);
+            const startBtn = document.getElementById('startRecordBtn' + questionNum);
+            const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
+            const playbackContainer = document.getElementById('playbackContainer' + questionNum);
 
+            // Set initial status
             if (statusLabel) {
                 statusLabel.textContent = '🎧 Listen to question...';
                 statusLabel.className = 'response-preview-label listening';
             }
+
+            // Hide all recording controls initially
+            if (startBtn) startBtn.style.display = 'none';
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (playbackContainer) playbackContainer.style.display = 'none';
 
             // Connect camera stream to preview immediately
             if (window.recordingManager) {
@@ -218,20 +221,20 @@ async function goToPage(pageNumber) {
             // Start timer for this question
             startTimer(questionNum);
 
-            // Play video and setup countdown after video ends
+            // Play video and show start button when it ends
             setTimeout(() => {
                 const video = document.getElementById('video' + questionNum);
                 if (video) {
                     video.currentTime = 0;
 
-                    // When video ends, show countdown then start recording
+                    // When video ends, show start recording button
                     video.onended = () => {
                         startRecordingCountdown(questionNum);
                     };
 
                     video.play().catch(err => {
                         console.log('Video autoplay prevented:', err);
-                        // If autoplay fails, start recording immediately
+                        // If autoplay fails, show start button immediately
                         startRecordingCountdown(questionNum);
                     });
                 }
@@ -245,23 +248,131 @@ async function goToPage(pageNumber) {
 }
 
 function startRecordingCountdown(questionNum) {
-    // No more countdown popup - start recording immediately
+    // Show "Ready to record" status and Start Recording button
+    const statusLabel = document.getElementById('statusLabel' + questionNum);
+    const startBtn = document.getElementById('startRecordBtn' + questionNum);
+
+    if (statusLabel) {
+        statusLabel.textContent = '✅ Ready to record';
+        statusLabel.className = 'response-preview-label listening';
+    }
+
+    if (startBtn) {
+        startBtn.style.display = 'inline-block';
+    }
+}
+
+// Store recorded blobs temporarily
+const recordedBlobs = {};
+
+function startRecording(questionNum) {
+    // Hide start button, show stop button
+    const startBtn = document.getElementById('startRecordBtn' + questionNum);
+    const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
+    const statusLabel = document.getElementById('statusLabel' + questionNum);
+
+    if (startBtn) startBtn.style.display = 'none';
+    if (stopBtn) stopBtn.style.display = 'inline-block';
+
+    // Update status label
+    if (statusLabel) {
+        statusLabel.textContent = '🎤 Recording... speak now';
+        statusLabel.className = 'response-preview-label recording';
+    }
+
     // Start recording
     if (window.recordingManager) {
         window.recordingManager.startQuestionRecording(questionNum);
+    }
+}
 
-        // Update label to "Provide your response" with recording class and show done button
-        const statusLabel = document.getElementById('statusLabel' + questionNum);
-        const doneButton = document.getElementById('doneButton' + questionNum);
+async function stopRecording(questionNum) {
+    // Hide stop button
+    const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
+    const statusLabel = document.getElementById('statusLabel' + questionNum);
 
-        if (statusLabel) {
-            statusLabel.textContent = '🎤 Provide your response';
-            statusLabel.className = 'response-preview-label recording';
+    if (stopBtn) stopBtn.style.display = 'none';
+
+    // Update status label
+    if (statusLabel) {
+        statusLabel.textContent = '✅ Recording stopped';
+        statusLabel.className = 'response-preview-label listening';
+    }
+
+    // Stop recording and get blob
+    if (window.recordingManager) {
+        try {
+            const blob = await window.recordingManager.stopQuestionRecording();
+            recordedBlobs[questionNum] = blob;
+
+            // Show playback preview
+            const playbackContainer = document.getElementById('playbackContainer' + questionNum);
+            const playbackVideo = document.getElementById('playbackVideo' + questionNum);
+
+            if (playbackContainer && playbackVideo && blob) {
+                playbackVideo.src = URL.createObjectURL(blob);
+                playbackContainer.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error stopping recording:', error);
+            alert('Error stopping recording. Please try again.');
         }
+    }
+}
 
-        if (doneButton) {
-            doneButton.classList.add('active');
-        }
+function eraseRecording(questionNum) {
+    // Clear the recorded blob
+    delete recordedBlobs[questionNum];
+
+    // Hide playback container
+    const playbackContainer = document.getElementById('playbackContainer' + questionNum);
+    const playbackVideo = document.getElementById('playbackVideo' + questionNum);
+
+    if (playbackContainer) playbackContainer.style.display = 'none';
+    if (playbackVideo) {
+        URL.revokeObjectURL(playbackVideo.src);
+        playbackVideo.src = '';
+    }
+
+    // Show start button again
+    const statusLabel = document.getElementById('statusLabel' + questionNum);
+    const startBtn = document.getElementById('startRecordBtn' + questionNum);
+
+    if (statusLabel) {
+        statusLabel.textContent = '✅ Ready to record';
+        statusLabel.className = 'response-preview-label listening';
+    }
+
+    if (startBtn) {
+        startBtn.style.display = 'inline-block';
+    }
+}
+
+async function submitResponse(questionNum) {
+    // Get the recorded blob
+    const blob = recordedBlobs[questionNum];
+
+    if (!blob) {
+        alert('No recording found. Please record your response first.');
+        return;
+    }
+
+    // Upload in background
+    if (window.recordingManager) {
+        window.recordingManager.uploadQuestionRecording(blob, questionNum).catch(err => {
+            console.error(`Upload Q${questionNum} failed:`, err);
+        });
+    }
+
+    // Hide playback container
+    const playbackContainer = document.getElementById('playbackContainer' + questionNum);
+    if (playbackContainer) playbackContainer.style.display = 'none';
+
+    // Move to next question or complete test
+    if (questionNum < 5) {
+        goToPage(questionNum + 6); // Next question page
+    } else {
+        await completeTest();
     }
 }
 
@@ -608,31 +719,39 @@ function repeatVideo(questionNumber) {
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
 
-        // Reset label to "Listen to question..." and hide done button
+        // Reset UI elements
         const statusLabel = document.getElementById('statusLabel' + questionNumber);
-        const doneButton = document.getElementById('doneButton' + questionNumber);
+        const startBtn = document.getElementById('startRecordBtn' + questionNumber);
+        const stopBtn = document.getElementById('stopRecordBtn' + questionNumber);
+        const playbackContainer = document.getElementById('playbackContainer' + questionNumber);
 
+        // Reset label
         if (statusLabel) {
             statusLabel.textContent = '🎧 Listen to question...';
             statusLabel.className = 'response-preview-label listening';
         }
-        if (doneButton) {
-            doneButton.classList.remove('active');
+
+        // Hide all recording controls
+        if (startBtn) startBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (playbackContainer) playbackContainer.style.display = 'none';
+
+        // Clear any recorded blob
+        delete recordedBlobs[questionNumber];
+
+        // Stop current recording if active
+        if (window.recordingManager?.isRecording) {
+            window.recordingManager.stopQuestionRecording().catch(err => {
+                console.error('Error stopping recording on repeat:', err);
+            });
         }
 
-        // Stop current recording temporarily
-        const wasRecording = window.recordingManager?.isRecording;
-        if (wasRecording) {
-            // Pause recording by hiding the indicator (recording continues in background)
-            document.getElementById('recordingIndicator').classList.remove('active');
-        }
-
-        // Play video and show countdown when it ends
+        // Play video and show start button when it ends
         const video = document.getElementById('video' + questionNumber);
         if (video) {
             video.currentTime = 0;
 
-            // When video ends, show countdown again
+            // When video ends, show start recording button
             video.onended = () => {
                 startRecordingCountdown(questionNumber);
             };

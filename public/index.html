@@ -643,6 +643,110 @@
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(39, 174, 96, 0.4);
         }
+
+        /* MANUAL RECORDING CONTROLS */
+        .record-button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 18px 45px;
+            font-size: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 700;
+            margin: 20px auto;
+        }
+
+        .record-button:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(231, 76, 60, 0.4);
+        }
+
+        .stop-button {
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 18px 45px;
+            font-size: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 700;
+            margin: 20px auto;
+        }
+
+        .stop-button:hover {
+            background: #2c3e50;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(52, 73, 94, 0.4);
+        }
+
+        /* PLAYBACK PREVIEW */
+        .playback-container {
+            max-width: 600px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .playback-label {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .playback-container video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            margin-bottom: 20px;
+        }
+
+        .playback-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .erase-button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .erase-button:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .submit-button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .submit-button:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -895,10 +999,29 @@
                 <span class="repeat-counter" id="counter1">Repeats remaining: 2</span>
             </div>
 
-            <div class="center">
-                <button class="done-button" id="doneButton1" onclick="finishQuestion(7)">
-                    ✅ I'm Done - Next Question
+            <!-- Recording Controls -->
+            <div class="center" id="recordingControls1">
+                <button class="record-button" id="startRecordBtn1" onclick="startRecording(1)" style="display: none;">
+                    🎤 Start Recording
                 </button>
+                <button class="stop-button" id="stopRecordBtn1" onclick="stopRecording(1)" style="display: none;">
+                    ⏹️ Stop Recording
+                </button>
+            </div>
+
+            <!-- Playback Preview (shows recorded response) -->
+            <div class="playback-container" id="playbackContainer1" style="display: none;">
+                <div class="playback-label">📹 Your Recorded Response - Preview</div>
+                <video id="playbackVideo1" controls playsinline></video>
+
+                <div class="playback-actions">
+                    <button class="erase-button" onclick="eraseRecording(1)">
+                        🗑️ Erase & Re-record
+                    </button>
+                    <button class="submit-button" onclick="submitResponse(1)">
+                        ✅ Submit Response
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -940,10 +1063,29 @@
                 <span class="repeat-counter" id="counter2">Repeats remaining: 2</span>
             </div>
 
-            <div class="center">
-                <button class="done-button" id="doneButton2" onclick="finishQuestion(8)">
-                    ✅ I'm Done - Next Question
+            <!-- Recording Controls -->
+            <div class="center" id="recordingControls2">
+                <button class="record-button" id="startRecordBtn2" onclick="startRecording(2)" style="display: none;">
+                    🎤 Start Recording
                 </button>
+                <button class="stop-button" id="stopRecordBtn2" onclick="stopRecording(2)" style="display: none;">
+                    ⏹️ Stop Recording
+                </button>
+            </div>
+
+            <!-- Playback Preview (shows recorded response) -->
+            <div class="playback-container" id="playbackContainer2" style="display: none;">
+                <div class="playback-label">📹 Your Recorded Response - Preview</div>
+                <video id="playbackVideo2" controls playsinline></video>
+
+                <div class="playback-actions">
+                    <button class="erase-button" onclick="eraseRecording(2)">
+                        🗑️ Erase & Re-record
+                    </button>
+                    <button class="submit-button" onclick="submitResponse(2)">
+                        ✅ Submit Response
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -985,10 +1127,29 @@
                 <span class="repeat-counter" id="counter3">Repeats remaining: 2</span>
             </div>
 
-            <div class="center">
-                <button class="done-button" id="doneButton3" onclick="finishQuestion(9)">
-                    ✅ I'm Done - Next Question
+            <!-- Recording Controls -->
+            <div class="center" id="recordingControls3">
+                <button class="record-button" id="startRecordBtn3" onclick="startRecording(3)" style="display: none;">
+                    🎤 Start Recording
                 </button>
+                <button class="stop-button" id="stopRecordBtn3" onclick="stopRecording(3)" style="display: none;">
+                    ⏹️ Stop Recording
+                </button>
+            </div>
+
+            <!-- Playback Preview (shows recorded response) -->
+            <div class="playback-container" id="playbackContainer3" style="display: none;">
+                <div class="playback-label">📹 Your Recorded Response - Preview</div>
+                <video id="playbackVideo3" controls playsinline></video>
+
+                <div class="playback-actions">
+                    <button class="erase-button" onclick="eraseRecording(3)">
+                        🗑️ Erase & Re-record
+                    </button>
+                    <button class="submit-button" onclick="submitResponse(3)">
+                        ✅ Submit Response
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1030,10 +1191,29 @@
                 <span class="repeat-counter" id="counter4">Repeats remaining: 2</span>
             </div>
 
-            <div class="center">
-                <button class="done-button" id="doneButton4" onclick="finishQuestion(10)">
-                    ✅ I'm Done - Next Question
+            <!-- Recording Controls -->
+            <div class="center" id="recordingControls4">
+                <button class="record-button" id="startRecordBtn4" onclick="startRecording(4)" style="display: none;">
+                    🎤 Start Recording
                 </button>
+                <button class="stop-button" id="stopRecordBtn4" onclick="stopRecording(4)" style="display: none;">
+                    ⏹️ Stop Recording
+                </button>
+            </div>
+
+            <!-- Playback Preview (shows recorded response) -->
+            <div class="playback-container" id="playbackContainer4" style="display: none;">
+                <div class="playback-label">📹 Your Recorded Response - Preview</div>
+                <video id="playbackVideo4" controls playsinline></video>
+
+                <div class="playback-actions">
+                    <button class="erase-button" onclick="eraseRecording(4)">
+                        🗑️ Erase & Re-record
+                    </button>
+                    <button class="submit-button" onclick="submitResponse(4)">
+                        ✅ Submit Response
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1075,10 +1255,29 @@
                 <span class="repeat-counter" id="counter5">Repeats remaining: 2</span>
             </div>
 
-            <div class="center">
-                <button class="done-button" id="doneButton5" onclick="finishQuestion('complete')">
-                    ✅ I'm Done - Complete Test
+            <!-- Recording Controls -->
+            <div class="center" id="recordingControls5">
+                <button class="record-button" id="startRecordBtn5" onclick="startRecording(5)" style="display: none;">
+                    🎤 Start Recording
                 </button>
+                <button class="stop-button" id="stopRecordBtn5" onclick="stopRecording(5)" style="display: none;">
+                    ⏹️ Stop Recording
+                </button>
+            </div>
+
+            <!-- Playback Preview (shows recorded response) -->
+            <div class="playback-container" id="playbackContainer5" style="display: none;">
+                <div class="playback-label">📹 Your Recorded Response - Preview</div>
+                <video id="playbackVideo5" controls playsinline></video>
+
+                <div class="playback-actions">
+                    <button class="erase-button" onclick="eraseRecording(5)">
+                        🗑️ Erase & Re-record
+                    </button>
+                    <button class="submit-button" onclick="submitResponse(5)">
+                        ✅ Submit & Complete Test
+                    </button>
+                </div>
             </div>
         </div>
 
