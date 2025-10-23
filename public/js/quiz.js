@@ -9,7 +9,6 @@ const repeatCounts = {
 
 // Current page tracker
 let currentPage = 1;
-let isChangingPage = false; // ADD THIS - prevents double clicks
 
 // Preview stream for equipment test
 let previewStream = null;
@@ -28,63 +27,45 @@ function stopAllVideos() {
 }
 
 async function goToPage(pageNumber) {
-    // Prevent concurrent calls
-    if (isChangingPage) {
-        console.log('Already changing pages, ignoring...');
-        return;
+    const previousPage = currentPage;
+    
+    // If leaving a question page (5-9), stop and upload that question FIRST
+    if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
+        const questionNum = previousPage - 4;
+        await stopAndUploadQuestion(questionNum);
     }
     
-    isChangingPage = true;
+    // Stop all videos before changing pages
+    stopAllVideos();
     
-    try {
-        const previousPage = currentPage;
-        
-        // If leaving a question page (5-9), stop and upload that question FIRST
-        if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
-            const questionNum = previousPage - 4;
-            await stopAndUploadQuestion(questionNum);
+    // Hide all pages
+    document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+    });
+    
+    // Show target page
+    document.getElementById('page' + pageNumber).classList.add('active');
+    currentPage = pageNumber;
+    
+    // Auto-play video if it's a question page (5-9)
+    if (pageNumber >= 5 && pageNumber <= 9) {
+        const questionNum = pageNumber - 4;
+        const video = document.getElementById('video' + questionNum);
+        if (video) {
+            setTimeout(() => {
+                video.currentTime = 0;
+                video.play();
+            }, 500);
         }
         
-        // Stop all videos before changing pages
-        stopAllVideos();
-        
-        // Hide all pages
-        document.querySelectorAll('.page').forEach(page => {
-            page.classList.remove('active');
-        });
-        
-        // Show target page
-        document.getElementById('page' + pageNumber).classList.add('active');
-        currentPage = pageNumber;
-        
-        // Auto-play video if it's a question page (5-9)
-        if (pageNumber >= 5 && pageNumber <= 9) {
-            const questionNum = pageNumber - 4;
-            const video = document.getElementById('video' + questionNum);
-            if (video) {
-                setTimeout(() => {
-                    video.currentTime = 0;
-                    video.play();
-                }, 500);
-            }
-            
-            // Start recording for this NEW question
-            if (window.recordingManager) {
-                // Add delay to ensure previous recording is fully stopped
-                setTimeout(() => {
-                    window.recordingManager.startQuestionRecording(questionNum);
-                }, 100);
-            }
+        // Start recording for this NEW question
+        if (window.recordingManager) {
+            window.recordingManager.startQuestionRecording(questionNum);
         }
-        
-        // Scroll to top
-        window.scrollTo(0, 0);
-    } finally {
-        // Release the lock after a short delay
-        setTimeout(() => {
-            isChangingPage = false;
-        }, 500);
     }
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
 }
 
 async function stopAndUploadQuestion(questionNum) {
@@ -305,27 +286,17 @@ function repeatVideo(questionNumber) {
 }
 
 async function completeTest() {
-    // Prevent double-clicks
-    if (isChangingPage) return;
-    isChangingPage = true;
+    // Stop all videos
+    stopAllVideos();
     
-    try {
-        // Stop all videos
-        stopAllVideos();
-        
-        // Stop and upload the last question (Question 5)
-        await stopAndUploadQuestion(5);
-        
-        // Stop all recording completely
-        window.recordingManager.stopAllRecording();
-        
-        // Go to completion page
-        currentPage = 11;
-        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-        document.getElementById('page11').classList.add('active');
-    } finally {
-        isChangingPage = false;
-    }
+    // Stop and upload the last question (Question 5)
+    await stopAndUploadQuestion(5);
+    
+    // Stop all recording completely
+    window.recordingManager.stopAllRecording();
+    
+    // Go to completion page
+    goToPage(11);
 }
 
 // Allow Enter key to submit passcode
