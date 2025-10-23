@@ -133,21 +133,3 @@ export default async function uploadHandler(req, res) {
     });
   }
 }
-```
-
-## What this does:
-
-1. **Creates a folder named:** `FirstName_LastName_Passcode` (e.g., `Kevin_Thakkar_1089100823457`)
-2. **Searches for existing folder** - if it exists, uses it (so all 5 questions go in same folder)
-3. **Uploads each question recording** to that person's folder
-4. **Each file is named:** `Question_1_timestamp.webm`, `Question_2_timestamp.webm`, etc.
-
-## Result in Google Drive:
-```
-📁 Language Proficiency Screenings/
-  📁 Kevin_Thakkar_1089100823457/
-    🎥 Question_1_2025-10-23T01:20:00.webm
-    🎥 Question_2_2025-10-23T01:22:30.webm
-    🎥 Question_3_2025-10-23T01:25:00.webm
-    🎥 Question_4_2025-10-23T01:27:30.webm
-    🎥 Question_5_2025-10-23T01:30:00.webm
