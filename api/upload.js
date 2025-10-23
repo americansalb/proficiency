@@ -2,14 +2,7 @@ import { google } from 'googleapis';
 import formidable from 'formidable';
 import fs from 'fs';
 
-// Disable body parsing, we'll use formidable
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-export default async function handler(req, res) {
+export default async function uploadHandler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -18,7 +11,7 @@ export default async function handler(req, res) {
   try {
     // Parse the multipart form data
     const form = formidable({
-      maxFileSize: 500 * 1024 * 1024, // 500MB max file size
+      maxFileSize: 100 * 1024 * 1024, // 100MB max file size per question
       keepExtensions: true,
     });
 
@@ -31,15 +24,19 @@ export default async function handler(req, res) {
 
     // Get uploaded file
     const videoFile = files.video[0];
-    const participantName = fields.participantName[0];
+    const firstName = fields.firstName[0];
+    const lastName = fields.lastName[0];
     const passcode = fields.passcode[0];
+    const questionNumber = fields.questionNumber[0];
     const timestamp = fields.timestamp[0];
 
     console.log('Received upload:', {
       filename: videoFile.originalFilename,
       size: videoFile.size,
-      participantName,
+      firstName,
+      lastName,
       passcode,
+      questionNumber,
       timestamp
     });
 
@@ -58,10 +55,47 @@ export default async function handler(req, res) {
 
     const drive = google.drive({ version: 'v3', auth });
 
-    // Upload to Google Drive
+    // Create or get participant folder: "FirstName_LastName_Passcode"
+    const folderName = `${firstName}_${lastName}_${passcode}`;
+    let participantFolderId;
+
+    // Search for existing folder
+    const folderQuery = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and '${process.env.GOOGLE_DRIVE_FOLDER_ID}' in parents and trashed=false`;
+    
+    const folderSearch = await drive.files.list({
+      q: folderQuery,
+      fields: 'files(id, name)',
+      spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
+    });
+
+    if (folderSearch.data.files.length > 0) {
+      // Folder exists, use it
+      participantFolderId = folderSearch.data.files[0].id;
+      console.log('Using existing folder:', folderName);
+    } else {
+      // Create new folder
+      const folderMetadata = {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [process.env.GOOGLE_DRIVE_FOLDER_ID]
+      };
+
+      const folder = await drive.files.create({
+        requestBody: folderMetadata,
+        fields: 'id',
+        supportsAllDrives: true
+      });
+
+      participantFolderId = folder.data.id;
+      console.log('Created new folder:', folderName);
+    }
+
+    // Upload video to participant's folder
     const fileMetadata = {
       name: videoFile.originalFilename,
-      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
+      parents: [participantFolderId],
     };
 
     const media = {
@@ -73,6 +107,7 @@ export default async function handler(req, res) {
       requestBody: fileMetadata,
       media: media,
       fields: 'id, name, webViewLink',
+      supportsAllDrives: true,
     });
 
     console.log('File uploaded to Google Drive:', file.data);
@@ -86,9 +121,8 @@ export default async function handler(req, res) {
       fileId: file.data.id,
       fileName: file.data.name,
       webViewLink: file.data.webViewLink,
-      participantName,
-      passcode,
-      timestamp,
+      folderName: folderName,
+      questionNumber: questionNumber,
     });
 
   } catch (error) {
