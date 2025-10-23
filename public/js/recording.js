@@ -1,11 +1,13 @@
-// Recording Management - Per Question Recording
+// Continuous Recording Manager with Auto-Chunking
 class RecordingManager {
     constructor() {
         this.mediaRecorder = null;
-        this.recordedChunks = [];
         this.stream = null;
         this.isRecording = false;
         this.participantInfo = null;
+        this.chunkNumber = 0;
+        this.recordingStartTime = null;
+        this.questionBoundaries = []; // Track when each question starts
         this.currentQuestion = 0;
     }
 
@@ -14,7 +16,7 @@ class RecordingManager {
             // Request camera and microphone access
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: { ideal: 320 },  // Very low resolution
+                    width: { ideal: 320 },  // Low resolution for smaller file size
                     height: { ideal: 240 }
                 },
                 audio: {
@@ -23,7 +25,7 @@ class RecordingManager {
                     sampleRate: 44100
                 }
             });
-            
+
             console.log('Camera and microphone access granted');
             return true;
         } catch (error) {
@@ -42,14 +44,16 @@ class RecordingManager {
         };
     }
 
-    startQuestionRecording(questionNumber) {
+    startContinuousRecording() {
         if (!this.stream) {
             console.error('No media stream available');
             return false;
         }
 
-        this.currentQuestion = questionNumber;
-        this.recordedChunks = [];
+        if (this.isRecording) {
+            console.log('Recording already in progress');
+            return true;
+        }
 
         try {
             // ULTRA COMPRESSED VIDEO (potato quality for fast upload)
@@ -64,21 +68,36 @@ class RecordingManager {
             }
 
             this.mediaRecorder = new MediaRecorder(this.stream, videoOptions);
+            this.recordingStartTime = Date.now();
+            this.chunkNumber = 0;
+            this.questionBoundaries = [];
 
-            this.mediaRecorder.ondataavailable = (event) => {
+            // Auto-chunk every 5 minutes (300000 ms)
+            this.mediaRecorder.ondataavailable = async (event) => {
                 if (event.data && event.data.size > 0) {
-                    this.recordedChunks.push(event.data);
+                    this.chunkNumber++;
+                    console.log(`Chunk ${this.chunkNumber} ready, size: ${event.data.size} bytes`);
+
+                    // Upload chunk in background (non-blocking)
+                    this.uploadChunk(event.data, this.chunkNumber).catch(err => {
+                        console.error(`Chunk ${this.chunkNumber} upload failed:`, err);
+                    });
                 }
             };
 
-            // Start recording
-            this.mediaRecorder.start(1000);
+            this.mediaRecorder.onstop = () => {
+                console.log('Recording stopped');
+                this.isRecording = false;
+            };
+
+            // Start recording with 5-minute chunks
+            this.mediaRecorder.start(300000); // 5 minutes = 300000 ms
             this.isRecording = true;
 
             // Show recording indicator
             document.getElementById('recordingIndicator').classList.add('active');
 
-            console.log(`Question ${questionNumber} recording started`);
+            console.log('Continuous recording started with 5-minute auto-chunking');
             return true;
         } catch (error) {
             console.error('Error starting recording:', error);
@@ -86,41 +105,39 @@ class RecordingManager {
         }
     }
 
-    stopQuestionRecording() {
-        return new Promise((resolve, reject) => {
-            if (!this.mediaRecorder || !this.isRecording) {
-                reject(new Error('No active recording'));
-                return;
-            }
+    markQuestionBoundary(questionNumber) {
+        const timestamp = Date.now() - this.recordingStartTime;
+        this.currentQuestion = questionNumber;
 
-            this.mediaRecorder.onstop = () => {
-                this.isRecording = false;
-                
-                // Create blob from recorded chunks
-                const blob = new Blob(this.recordedChunks, {
-                    type: 'video/webm'
-                });
-
-                console.log(`Question ${this.currentQuestion} recording stopped, blob size:`, blob.size);
-
-                resolve(blob);
-            };
-
-            this.mediaRecorder.stop();
+        this.questionBoundaries.push({
+            question: questionNumber,
+            timestamp: timestamp,
+            timeFormatted: this.formatTime(timestamp)
         });
+
+        console.log(`Question ${questionNumber} started at ${this.formatTime(timestamp)}`);
     }
 
-    async uploadQuestionRecording(blob) {
+    formatTime(milliseconds) {
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    async uploadChunk(blob, chunkNum) {
         const timestamp = new Date().toISOString();
-        const filename = `Question_${this.currentQuestion}_${timestamp}.webm`;
+        const filename = `Chunk_${chunkNum}_${timestamp}.webm`;
 
         const formData = new FormData();
         formData.append('video', blob, filename);
         formData.append('firstName', this.participantInfo.firstName);
         formData.append('lastName', this.participantInfo.lastName);
         formData.append('passcode', this.participantInfo.passcode);
-        formData.append('questionNumber', this.currentQuestion);
+        formData.append('chunkNumber', chunkNum);
         formData.append('timestamp', timestamp);
+        formData.append('currentQuestion', this.currentQuestion);
+        formData.append('questionBoundaries', JSON.stringify(this.questionBoundaries));
 
         try {
             const response = await fetch('/api/upload', {
@@ -133,23 +150,61 @@ class RecordingManager {
             }
 
             const result = await response.json();
-            console.log(`Question ${this.currentQuestion} uploaded:`, result);
+            console.log(`Chunk ${chunkNum} uploaded successfully:`, result);
             return result;
         } catch (error) {
-            console.error('Upload error:', error);
+            console.error(`Chunk ${chunkNum} upload error:`, error);
             throw error;
         }
+    }
+
+    async stopAndUploadFinal() {
+        return new Promise((resolve, reject) => {
+            if (!this.mediaRecorder || !this.isRecording) {
+                reject(new Error('No active recording'));
+                return;
+            }
+
+            // Handle the final chunk
+            this.mediaRecorder.ondataavailable = async (event) => {
+                if (event.data && event.data.size > 0) {
+                    this.chunkNumber++;
+                    console.log(`Final chunk ${this.chunkNumber} ready, size: ${event.data.size} bytes`);
+
+                    try {
+                        await this.uploadChunk(event.data, this.chunkNumber);
+                        console.log('Final chunk uploaded successfully');
+                        resolve();
+                    } catch (error) {
+                        console.error('Final chunk upload failed:', error);
+                        reject(error);
+                    }
+                } else {
+                    resolve(); // No final data to upload
+                }
+            };
+
+            // Stop recording - this will trigger ondataavailable with final chunk
+            this.mediaRecorder.stop();
+        });
     }
 
     stopAllRecording() {
         // Hide recording indicator
         document.getElementById('recordingIndicator').classList.remove('active');
-        
+
+        // Stop media recorder if active
+        if (this.mediaRecorder && this.isRecording) {
+            this.mediaRecorder.stop();
+        }
+
         // Stop all tracks
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
             this.stream = null;
         }
+
+        this.isRecording = false;
     }
 }
 
