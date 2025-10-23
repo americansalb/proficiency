@@ -1,14 +1,13 @@
-// Continuous Recording Manager with Auto-Chunking
+// Recording Management - Per Question with Non-Blocking Uploads
 class RecordingManager {
     constructor() {
         this.mediaRecorder = null;
+        this.recordedChunks = [];
         this.stream = null;
         this.isRecording = false;
         this.participantInfo = null;
-        this.chunkNumber = 0;
-        this.recordingStartTime = null;
-        this.questionBoundaries = []; // Track when each question starts
         this.currentQuestion = 0;
+        this.pendingUploads = []; // Track uploads in progress
     }
 
     async requestPermissions() {
@@ -16,7 +15,7 @@ class RecordingManager {
             // Request camera and microphone access
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: { ideal: 320 },  // Low resolution for smaller file size
+                    width: { ideal: 320 },  // Very low resolution
                     height: { ideal: 240 }
                 },
                 audio: {
@@ -44,16 +43,14 @@ class RecordingManager {
         };
     }
 
-    startContinuousRecording() {
+    startQuestionRecording(questionNumber) {
         if (!this.stream) {
             console.error('No media stream available');
             return false;
         }
 
-        if (this.isRecording) {
-            console.log('Recording already in progress');
-            return true;
-        }
+        this.currentQuestion = questionNumber;
+        this.recordedChunks = [];
 
         try {
             // ULTRA COMPRESSED VIDEO (potato quality for fast upload)
@@ -68,36 +65,21 @@ class RecordingManager {
             }
 
             this.mediaRecorder = new MediaRecorder(this.stream, videoOptions);
-            this.recordingStartTime = Date.now();
-            this.chunkNumber = 0;
-            this.questionBoundaries = [];
 
-            // Auto-chunk every 5 minutes (300000 ms)
-            this.mediaRecorder.ondataavailable = async (event) => {
+            this.mediaRecorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0) {
-                    this.chunkNumber++;
-                    console.log(`Chunk ${this.chunkNumber} ready, size: ${event.data.size} bytes`);
-
-                    // Upload chunk in background (non-blocking)
-                    this.uploadChunk(event.data, this.chunkNumber).catch(err => {
-                        console.error(`Chunk ${this.chunkNumber} upload failed:`, err);
-                    });
+                    this.recordedChunks.push(event.data);
                 }
             };
 
-            this.mediaRecorder.onstop = () => {
-                console.log('Recording stopped');
-                this.isRecording = false;
-            };
-
-            // Start recording with 5-minute chunks
-            this.mediaRecorder.start(300000); // 5 minutes = 300000 ms
+            // Start recording
+            this.mediaRecorder.start(1000);
             this.isRecording = true;
 
             // Show recording indicator
             document.getElementById('recordingIndicator').classList.add('active');
 
-            console.log('Continuous recording started with 5-minute auto-chunking');
+            console.log(`Question ${questionNumber} recording started`);
             return true;
         } catch (error) {
             console.error('Error starting recording:', error);
@@ -105,106 +87,92 @@ class RecordingManager {
         }
     }
 
-    markQuestionBoundary(questionNumber) {
-        const timestamp = Date.now() - this.recordingStartTime;
-        this.currentQuestion = questionNumber;
-
-        this.questionBoundaries.push({
-            question: questionNumber,
-            timestamp: timestamp,
-            timeFormatted: this.formatTime(timestamp)
-        });
-
-        console.log(`Question ${questionNumber} started at ${this.formatTime(timestamp)}`);
-    }
-
-    formatTime(milliseconds) {
-        const totalSeconds = Math.floor(milliseconds / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    async uploadChunk(blob, chunkNum) {
-        const timestamp = new Date().toISOString();
-        const filename = `Chunk_${chunkNum}_${timestamp}.webm`;
-
-        const formData = new FormData();
-        formData.append('video', blob, filename);
-        formData.append('firstName', this.participantInfo.firstName);
-        formData.append('lastName', this.participantInfo.lastName);
-        formData.append('passcode', this.participantInfo.passcode);
-        formData.append('chunkNumber', chunkNum);
-        formData.append('timestamp', timestamp);
-        formData.append('currentQuestion', this.currentQuestion);
-        formData.append('questionBoundaries', JSON.stringify(this.questionBoundaries));
-
-        try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`Upload failed: ${response.statusText}`);
-            }
-
-            const result = await response.json();
-            console.log(`Chunk ${chunkNum} uploaded successfully:`, result);
-            return result;
-        } catch (error) {
-            console.error(`Chunk ${chunkNum} upload error:`, error);
-            throw error;
-        }
-    }
-
-    async stopAndUploadFinal() {
+    stopQuestionRecording() {
         return new Promise((resolve, reject) => {
             if (!this.mediaRecorder || !this.isRecording) {
                 reject(new Error('No active recording'));
                 return;
             }
 
-            // Handle the final chunk
-            this.mediaRecorder.ondataavailable = async (event) => {
-                if (event.data && event.data.size > 0) {
-                    this.chunkNumber++;
-                    console.log(`Final chunk ${this.chunkNumber} ready, size: ${event.data.size} bytes`);
+            this.mediaRecorder.onstop = () => {
+                this.isRecording = false;
 
-                    try {
-                        await this.uploadChunk(event.data, this.chunkNumber);
-                        console.log('Final chunk uploaded successfully');
-                        resolve();
-                    } catch (error) {
-                        console.error('Final chunk upload failed:', error);
-                        reject(error);
-                    }
-                } else {
-                    resolve(); // No final data to upload
-                }
+                // Create blob from recorded chunks
+                const blob = new Blob(this.recordedChunks, {
+                    type: 'video/webm'
+                });
+
+                console.log(`Question ${this.currentQuestion} recording stopped, blob size:`, blob.size);
+
+                resolve(blob);
             };
 
-            // Stop recording - this will trigger ondataavailable with final chunk
             this.mediaRecorder.stop();
         });
+    }
+
+    async uploadQuestionRecording(blob, questionNumber) {
+        const timestamp = new Date().toISOString();
+        const filename = `Question_${questionNumber}_${timestamp}.webm`;
+
+        const formData = new FormData();
+        formData.append('video', blob, filename);
+        formData.append('firstName', this.participantInfo.firstName);
+        formData.append('lastName', this.participantInfo.lastName);
+        formData.append('passcode', this.participantInfo.passcode);
+        formData.append('questionNumber', questionNumber);
+        formData.append('timestamp', timestamp);
+
+        const uploadPromise = fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            console.log(`Question ${questionNumber} uploaded successfully:`, result);
+            return result;
+        })
+        .catch(error => {
+            console.error(`Question ${questionNumber} upload error:`, error);
+            throw error;
+        });
+
+        // Track this upload
+        this.pendingUploads.push(uploadPromise);
+
+        return uploadPromise;
+    }
+
+    async waitForAllUploads() {
+        console.log(`Waiting for ${this.pendingUploads.length} uploads to complete...`);
+
+        if (this.pendingUploads.length === 0) {
+            return;
+        }
+
+        try {
+            await Promise.all(this.pendingUploads);
+            console.log('All uploads completed successfully');
+        } catch (error) {
+            console.error('Some uploads failed:', error);
+            throw error;
+        }
     }
 
     stopAllRecording() {
         // Hide recording indicator
         document.getElementById('recordingIndicator').classList.remove('active');
 
-        // Stop media recorder if active
-        if (this.mediaRecorder && this.isRecording) {
-            this.mediaRecorder.stop();
-        }
-
         // Stop all tracks
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
             this.stream = null;
         }
-
-        this.isRecording = false;
     }
 }
 

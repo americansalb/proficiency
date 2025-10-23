@@ -46,6 +46,22 @@ async function goToPage(pageNumber) {
     try {
         const previousPage = currentPage;
 
+        // If leaving a question page, stop and upload in background (non-blocking)
+        if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
+            const questionNum = previousPage - 4;
+            if (window.recordingManager) {
+                try {
+                    const blob = await window.recordingManager.stopQuestionRecording();
+                    // Upload in background - don't wait!
+                    window.recordingManager.uploadQuestionRecording(blob, questionNum).catch(err => {
+                        console.error(`Background upload Q${questionNum} failed:`, err);
+                    });
+                } catch (err) {
+                    console.error(`Error stopping Q${questionNum}:`, err);
+                }
+            }
+        }
+
         // Stop all videos before changing pages
         stopAllVideos();
 
@@ -74,21 +90,13 @@ async function goToPage(pageNumber) {
             }, 300);
         }
 
-        // Starting first question (page 5) - start continuous recording
-        if (pageNumber === 5 && previousPage === 4) {
-            if (window.recordingManager) {
-                window.recordingManager.startContinuousRecording();
-                window.recordingManager.markQuestionBoundary(1);
-            }
-        }
-
         // Auto-play video if it's a question page (5-9)
         if (pageNumber >= 5 && pageNumber <= 9) {
             const questionNum = pageNumber - 4;
 
-            // Mark question boundary (but don't stop/start recording)
-            if (window.recordingManager && previousPage !== 4) {
-                window.recordingManager.markQuestionBoundary(questionNum);
+            // Start recording this question
+            if (window.recordingManager) {
+                window.recordingManager.startQuestionRecording(questionNum);
             }
 
             // All questions (Q1-5) use video tags now - play them
@@ -336,17 +344,23 @@ async function completeTest() {
         document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
         document.getElementById('page10').classList.add('active');
         document.getElementById('uploadSpinner').style.display = 'block';
-        document.getElementById('uploadMessage').textContent = 'Uploading final recording chunk...';
+        document.getElementById('uploadMessage').textContent = 'Finalizing uploads...';
 
-        // Stop continuous recording and upload final chunk
+        // Stop Q5 recording and upload it
         if (window.recordingManager) {
-            await window.recordingManager.stopAndUploadFinal();
+            const blob = await window.recordingManager.stopQuestionRecording();
+            window.recordingManager.uploadQuestionRecording(blob, 5).catch(err => {
+                console.error('Q5 upload failed:', err);
+            });
+
+            // Wait for all pending uploads to complete
+            await window.recordingManager.waitForAllUploads();
         }
 
         // Show success
         document.getElementById('uploadSpinner').style.display = 'none';
         document.getElementById('uploadSuccess').style.display = 'block';
-        document.getElementById('uploadMessage').textContent = 'All recording chunks uploaded successfully!';
+        document.getElementById('uploadMessage').textContent = 'All recordings uploaded successfully!';
 
         // Wait 2 seconds then show completion
         setTimeout(() => {
