@@ -13,7 +13,7 @@ let isChangingPage = false; // Prevent double-clicks
 
 // Timer variables
 let timerInterval = null;
-let timeRemaining = 300; // 5 minutes in seconds
+let timeRemaining = 1500; // 25 minutes in seconds
 
 // Preview stream for equipment test
 let previewStream = null;
@@ -26,8 +26,8 @@ function startTimer(questionNumber) {
         clearInterval(timerInterval);
     }
 
-    // Reset to 5 minutes
-    timeRemaining = 300;
+    // Reset to 25 minutes
+    timeRemaining = 1500;
 
     const timerDisplay = document.getElementById('timerDisplay' + questionNumber);
     const timerContainer = document.getElementById('timer' + questionNumber);
@@ -65,12 +65,12 @@ function updateTimerDisplay(timerDisplay, timerContainer) {
     // Remove all warning classes first
     timerContainer.classList.remove('warning', 'danger');
 
-    // Add warning when under 2 minutes
-    if (timeRemaining <= 120 && timeRemaining > 60) {
+    // Add warning when under 5 minutes
+    if (timeRemaining <= 300 && timeRemaining > 120) {
         timerContainer.classList.add('warning');
     }
-    // Add danger when under 1 minute
-    else if (timeRemaining <= 60) {
+    // Add danger when under 2 minutes
+    else if (timeRemaining <= 120) {
         timerContainer.classList.add('danger');
     }
 }

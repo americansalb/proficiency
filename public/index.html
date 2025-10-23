@@ -84,8 +84,8 @@
         }
 
         .button:hover {
-            background: #14FFEC;
-            color: #0d7377;
+            background: #0a5a5d;
+            color: white;
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(13, 115, 119, 0.4);
         }
@@ -223,45 +223,47 @@
         }
 
         .timer-container {
-            background: #14FFEC;
-            color: #0d7377;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 48px;
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            color: #6c757d;
+            padding: 8px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            text-align: right;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             transition: background 0.3s, color 0.3s;
+            border: 1px solid #e0e0e0;
         }
 
         .timer-container.warning {
-            background: #f39c12;
-            color: white;
-            animation: timerPulse 1s infinite;
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffc107;
         }
 
         .timer-container.danger {
-            background: #e74c3c;
-            color: white;
-            animation: timerPulse 0.5s infinite;
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+            animation: timerPulse 1s infinite;
         }
 
         @keyframes timerPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
         .timer-label {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: normal;
-            display: block;
-            margin-bottom: 10px;
+            margin-right: 8px;
+            color: #6c757d;
         }
 
         .repeat-button {
-            background: #14FFEC;
-            color: #0d7377;
+            background: #6c757d;
+            color: white;
             border: none;
             padding: 12px 30px;
             font-size: 14px;
@@ -273,7 +275,7 @@
         }
 
         .repeat-button:hover:not(:disabled) {
-            background: #0ff5d4;
+            background: #5a6268;
         }
 
         .repeat-button:disabled {
@@ -578,8 +580,8 @@
             </div>
 
             <div class="timer-container" id="timer1">
-                <span class="timer-label">Time Remaining</span>
-                <span id="timerDisplay1">5:00</span>
+                <span class="timer-label">Time Remaining:</span>
+                <span id="timerDisplay1">25:00</span>
             </div>
 
             <div class="video-container">
@@ -607,8 +609,8 @@
             </div>
 
             <div class="timer-container" id="timer2">
-                <span class="timer-label">Time Remaining</span>
-                <span id="timerDisplay2">5:00</span>
+                <span class="timer-label">Time Remaining:</span>
+                <span id="timerDisplay2">25:00</span>
             </div>
 
             <div class="video-container">
@@ -636,8 +638,8 @@
             </div>
 
             <div class="timer-container" id="timer3">
-                <span class="timer-label">Time Remaining</span>
-                <span id="timerDisplay3">5:00</span>
+                <span class="timer-label">Time Remaining:</span>
+                <span id="timerDisplay3">25:00</span>
             </div>
 
             <div class="video-container">
@@ -665,8 +667,8 @@
             </div>
 
             <div class="timer-container" id="timer4">
-                <span class="timer-label">Time Remaining</span>
-                <span id="timerDisplay4">5:00</span>
+                <span class="timer-label">Time Remaining:</span>
+                <span id="timerDisplay4">25:00</span>
             </div>
 
             <div class="video-container">
@@ -694,8 +696,8 @@
             </div>
 
             <div class="timer-container" id="timer5">
-                <span class="timer-label">Time Remaining</span>
-                <span id="timerDisplay5">5:00</span>
+                <span class="timer-label">Time Remaining:</span>
+                <span id="timerDisplay5">25:00</span>
             </div>
 
             <div class="video-container">
