@@ -557,6 +557,56 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
+
+        /* RESPONSE PREVIEW (camera during recording) */
+        .response-preview {
+            display: none;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+
+        .response-preview.active {
+            display: block;
+        }
+
+        .response-preview video {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            background: #000;
+        }
+
+        .response-preview-label {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: #27ae60;
+            margin-bottom: 15px;
+        }
+
+        .done-button {
+            display: none;
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            font-size: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 700;
+            margin: 30px auto;
+        }
+
+        .done-button.active {
+            display: inline-block;
+        }
+
+        .done-button:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(39, 174, 96, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -795,8 +845,16 @@
                 <span class="repeat-counter" id="counter1">Repeats remaining: 2</span>
             </div>
 
+            <!-- Response Preview (shows user's camera while recording) -->
+            <div class="response-preview" id="responsePreview1">
+                <div class="response-preview-label">📹 Your Response (Recording...)</div>
+                <video id="previewStream1" autoplay muted playsinline></video>
+            </div>
+
             <div class="center">
-                <button class="button" onclick="goToPage(7)">Next Question</button>
+                <button class="done-button" id="doneButton1" onclick="finishQuestion(7)">
+                    ✅ I'm Done - Next Question
+                </button>
             </div>
         </div>
 
@@ -824,8 +882,16 @@
                 <span class="repeat-counter" id="counter2">Repeats remaining: 2</span>
             </div>
 
+            <!-- Response Preview (shows user's camera while recording) -->
+            <div class="response-preview" id="responsePreview2">
+                <div class="response-preview-label">📹 Your Response (Recording...)</div>
+                <video id="previewStream2" autoplay muted playsinline></video>
+            </div>
+
             <div class="center">
-                <button class="button" onclick="goToPage(8)">Next Question</button>
+                <button class="done-button" id="doneButton2" onclick="finishQuestion(8)">
+                    ✅ I'm Done - Next Question
+                </button>
             </div>
         </div>
 
@@ -853,8 +919,16 @@
                 <span class="repeat-counter" id="counter3">Repeats remaining: 2</span>
             </div>
 
+            <!-- Response Preview (shows user's camera while recording) -->
+            <div class="response-preview" id="responsePreview3">
+                <div class="response-preview-label">📹 Your Response (Recording...)</div>
+                <video id="previewStream3" autoplay muted playsinline></video>
+            </div>
+
             <div class="center">
-                <button class="button" onclick="goToPage(9)">Next Question</button>
+                <button class="done-button" id="doneButton3" onclick="finishQuestion(9)">
+                    ✅ I'm Done - Next Question
+                </button>
             </div>
         </div>
 
@@ -882,8 +956,16 @@
                 <span class="repeat-counter" id="counter4">Repeats remaining: 2</span>
             </div>
 
+            <!-- Response Preview (shows user's camera while recording) -->
+            <div class="response-preview" id="responsePreview4">
+                <div class="response-preview-label">📹 Your Response (Recording...)</div>
+                <video id="previewStream4" autoplay muted playsinline></video>
+            </div>
+
             <div class="center">
-                <button class="button" onclick="goToPage(10)">Next Question</button>
+                <button class="done-button" id="doneButton4" onclick="finishQuestion(10)">
+                    ✅ I'm Done - Next Question
+                </button>
             </div>
         </div>
 
@@ -911,8 +993,16 @@
                 <span class="repeat-counter" id="counter5">Repeats remaining: 2</span>
             </div>
 
+            <!-- Response Preview (shows user's camera while recording) -->
+            <div class="response-preview" id="responsePreview5">
+                <div class="response-preview-label">📹 Your Response (Recording...)</div>
+                <video id="previewStream5" autoplay muted playsinline></video>
+            </div>
+
             <div class="center">
-                <button class="button" onclick="completeTest()">Complete Test</button>
+                <button class="done-button" id="doneButton5" onclick="finishQuestion('complete')">
+                    ✅ I'm Done - Complete Test
+                </button>
             </div>
         </div>
 

@@ -182,6 +182,16 @@ async function goToPage(pageNumber) {
         if (pageNumber >= 6 && pageNumber <= 10) {
             const questionNum = pageNumber - 5;
 
+            // Hide preview and done button when entering question page
+            const previewContainer = document.getElementById('responsePreview' + questionNum);
+            const doneButton = document.getElementById('doneButton' + questionNum);
+            if (previewContainer) {
+                previewContainer.classList.remove('active');
+            }
+            if (doneButton) {
+                doneButton.classList.remove('active');
+            }
+
             // Reset repeat button and counter display for this question
             const repeatButton = document.getElementById('repeat' + questionNum);
             const counter = document.getElementById('counter' + questionNum);
@@ -238,26 +248,59 @@ function startRecordingCountdown(questionNum) {
             count--;
             setTimeout(showNumber, 1000);
         } else {
-            // Show "SPEAK NOW" message
-            countdownContent.innerHTML = `
-                <div class="speak-now-message">
-                    🎤 SPEAK NOW 🎤
-                </div>
-            `;
+            // Hide countdown overlay
+            countdownOverlay.classList.remove('active');
 
             // Start recording
             if (window.recordingManager) {
                 window.recordingManager.startQuestionRecording(questionNum);
-            }
 
-            // Hide countdown overlay after 2 seconds
-            setTimeout(() => {
-                countdownOverlay.classList.remove('active');
-            }, 2000);
+                // Show camera preview with recording stream
+                const previewContainer = document.getElementById('responsePreview' + questionNum);
+                const previewVideo = document.getElementById('previewStream' + questionNum);
+                const doneButton = document.getElementById('doneButton' + questionNum);
+
+                if (previewContainer && previewVideo && doneButton) {
+                    // Connect preview to recording stream
+                    if (window.recordingManager.stream) {
+                        previewVideo.srcObject = window.recordingManager.stream;
+                    }
+
+                    // Show preview and done button
+                    previewContainer.classList.add('active');
+                    doneButton.classList.add('active');
+                }
+            }
         }
     }
 
     showNumber();
+}
+
+async function finishQuestion(nextPage) {
+    // Prevent double-clicks
+    if (isChangingPage) return;
+
+    const questionNum = currentPage - 5; // Current question number (1-5)
+
+    // Hide preview and done button for current question
+    const previewContainer = document.getElementById('responsePreview' + questionNum);
+    const doneButton = document.getElementById('doneButton' + questionNum);
+
+    if (previewContainer) {
+        previewContainer.classList.remove('active');
+    }
+    if (doneButton) {
+        doneButton.classList.remove('active');
+    }
+
+    // If this is the last question, complete the test
+    if (nextPage === 'complete') {
+        await completeTest();
+    } else {
+        // Navigate to next page (this will handle stopping/uploading recording)
+        goToPage(nextPage);
+    }
 }
 
 async function validatePasscode(passcode) {
@@ -580,6 +623,16 @@ function repeatVideo(questionNumber) {
         // Update counter display
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
+
+        // Hide preview and done button while replaying video
+        const previewContainer = document.getElementById('responsePreview' + questionNumber);
+        const doneButton = document.getElementById('doneButton' + questionNumber);
+        if (previewContainer) {
+            previewContainer.classList.remove('active');
+        }
+        if (doneButton) {
+            doneButton.classList.remove('active');
+        }
 
         // Stop current recording temporarily
         const wasRecording = window.recordingManager?.isRecording;
