@@ -2,8 +2,11 @@
 class RecordingManager {
     constructor() {
         this.mediaRecorder = null;
+        this.audioRecorder = null;
         this.recordedChunks = [];
+        this.audioChunks = [];
         this.stream = null;
+        this.audioStream = null;
         this.isRecording = false;
         this.participantName = '';
         this.passcode = '';
@@ -14,8 +17,8 @@ class RecordingManager {
             // Request camera and microphone access
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+                    width: { ideal: 640 },  // Lower resolution
+                    height: { ideal: 480 }
                 },
                 audio: {
                     echoCancellation: true,
@@ -42,20 +45,21 @@ class RecordingManager {
         this.participantName = participantName;
         this.passcode = passcode;
         this.recordedChunks = [];
+        this.audioChunks = [];
 
         try {
-            // Use webm format with VP9 codec for better compression
-            const options = {
-                mimeType: 'video/webm;codecs=vp9,opus',
-                videoBitsPerSecond: 2500000 // 2.5 Mbps for good quality
+            // VIDEO + AUDIO recording (heavily compressed)
+            const videoOptions = {
+                mimeType: 'video/webm;codecs=vp8,opus',
+                videoBitsPerSecond: 250000,  // 250 kbps - very low quality video
+                audioBitsPerSecond: 128000   // 128 kbps - good audio
             };
 
-            // Fallback to VP8 if VP9 not supported
-            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                options.mimeType = 'video/webm;codecs=vp8,opus';
+            if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) {
+                videoOptions.mimeType = 'video/webm';
             }
 
-            this.mediaRecorder = new MediaRecorder(this.stream, options);
+            this.mediaRecorder = new MediaRecorder(this.stream, videoOptions);
 
             this.mediaRecorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0) {
@@ -63,22 +67,32 @@ class RecordingManager {
                 }
             };
 
-            this.mediaRecorder.onstop = () => {
-                console.log('Recording stopped, chunks:', this.recordedChunks.length);
+            // AUDIO-ONLY recording (separate, for backup)
+            const audioTrack = this.stream.getAudioTracks()[0];
+            this.audioStream = new MediaStream([audioTrack]);
+            
+            const audioOptions = {
+                mimeType: 'audio/webm;codecs=opus',
+                audioBitsPerSecond: 128000
             };
 
-            this.mediaRecorder.onerror = (event) => {
-                console.error('MediaRecorder error:', event.error);
+            this.audioRecorder = new MediaRecorder(this.audioStream, audioOptions);
+
+            this.audioRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    this.audioChunks.push(event.data);
+                }
             };
 
-            // Start recording
-            this.mediaRecorder.start(1000); // Collect data every second
+            // Start both recordings
+            this.mediaRecorder.start(1000);
+            this.audioRecorder.start(1000);
             this.isRecording = true;
 
             // Show recording indicator
             document.getElementById('recordingIndicator').classList.add('active');
 
-            console.log('Recording started');
+            console.log('Recording started (video + separate audio)');
             return true;
         } catch (error) {
             console.error('Error starting recording:', error);
@@ -93,54 +107,113 @@ class RecordingManager {
                 return;
             }
 
-            this.mediaRecorder.onstop = () => {
-                this.isRecording = false;
-                
-                // Hide recording indicator
-                document.getElementById('recordingIndicator').classList.remove('active');
+            let videoStopped = false;
+            let audioStopped = false;
 
-                // Create blob from recorded chunks
-                const blob = new Blob(this.recordedChunks, {
-                    type: 'video/webm'
-                });
+            const checkBothStopped = () => {
+                if (videoStopped && audioStopped) {
+                    this.isRecording = false;
+                    
+                    // Hide recording indicator
+                    document.getElementById('recordingIndicator').classList.remove('active');
 
-                console.log('Recording stopped, blob size:', blob.size);
+                    // Create video blob
+                    const videoBlob = new Blob(this.recordedChunks, {
+                        type: 'video/webm'
+                    });
 
-                // Stop all tracks
-                if (this.stream) {
-                    this.stream.getTracks().forEach(track => track.stop());
+                    // Create audio blob
+                    const audioBlob = new Blob(this.audioChunks, {
+                        type: 'audio/webm'
+                    });
+
+                    console.log('Recording stopped');
+                    console.log('Video blob size:', videoBlob.size);
+                    console.log('Audio blob size:', audioBlob.size);
+
+                    // Stop all tracks
+                    if (this.stream) {
+                        this.stream.getTracks().forEach(track => track.stop());
+                    }
+
+                    resolve({ videoBlob, audioBlob });
                 }
+            };
 
-                resolve(blob);
+            this.mediaRecorder.onstop = () => {
+                videoStopped = true;
+                checkBothStopped();
+            };
+
+            this.audioRecorder.onstop = () => {
+                audioStopped = true;
+                checkBothStopped();
             };
 
             this.mediaRecorder.stop();
+            this.audioRecorder.stop();
         });
     }
 
-    async uploadRecording(blob) {
-        const formData = new FormData();
+    async uploadRecording(videoBlob, audioBlob) {
         const timestamp = new Date().toISOString();
-        const filename = `${this.passcode}_${this.participantName.replace(/\s+/g, '_')}_${timestamp}.webm`;
-
-        formData.append('video', blob, filename);
-        formData.append('participantName', this.participantName);
-        formData.append('passcode', this.passcode);
-        formData.append('timestamp', timestamp);
+        const baseFilename = `${this.passcode}_${this.participantName.replace(/\s+/g, '_')}_${timestamp}`;
 
         try {
-            const response = await fetch('/api/upload', {
+            // Upload AUDIO first (small, reliable)
+            console.log('Uploading audio...');
+            const audioFormData = new FormData();
+            audioFormData.append('video', audioBlob, `${baseFilename}_AUDIO.webm`);
+            audioFormData.append('participantName', this.participantName);
+            audioFormData.append('passcode', this.passcode);
+            audioFormData.append('timestamp', timestamp);
+            audioFormData.append('type', 'audio');
+
+            const audioResponse = await fetch('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: audioFormData
             });
 
-            if (!response.ok) {
-                throw new Error(`Upload failed: ${response.statusText}`);
+            if (!audioResponse.ok) {
+                throw new Error(`Audio upload failed: ${audioResponse.statusText}`);
             }
 
-            const result = await response.json();
-            console.log('Upload successful:', result);
-            return result;
+            const audioResult = await audioResponse.json();
+            console.log('Audio uploaded successfully:', audioResult);
+
+            // Upload VIDEO (larger, might fail)
+            console.log('Uploading video...');
+            const videoFormData = new FormData();
+            videoFormData.append('video', videoBlob, `${baseFilename}_VIDEO.webm`);
+            videoFormData.append('participantName', this.participantName);
+            videoFormData.append('passcode', this.passcode);
+            videoFormData.append('timestamp', timestamp);
+            videoFormData.append('type', 'video');
+
+            const videoResponse = await fetch('/api/upload', {
+                method: 'POST',
+                body: videoFormData
+            });
+
+            if (!videoResponse.ok) {
+                console.warn('Video upload failed, but audio succeeded');
+                return {
+                    success: true,
+                    audioOnly: true,
+                    audio: audioResult,
+                    videoError: videoResponse.statusText
+                };
+            }
+
+            const videoResult = await videoResponse.json();
+            console.log('Video uploaded successfully:', videoResult);
+
+            return {
+                success: true,
+                audio: audioResult,
+                video: videoResult
+            };
+
         } catch (error) {
             console.error('Upload error:', error);
             throw error;
