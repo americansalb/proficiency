@@ -1,15 +1,12 @@
-// Recording Management
+// Recording Management - Per Question Recording
 class RecordingManager {
     constructor() {
         this.mediaRecorder = null;
-        this.audioRecorder = null;
         this.recordedChunks = [];
-        this.audioChunks = [];
         this.stream = null;
-        this.audioStream = null;
         this.isRecording = false;
-        this.participantName = '';
-        this.passcode = '';
+        this.participantInfo = null;
+        this.currentQuestion = 0;
     }
 
     async requestPermissions() {
@@ -17,8 +14,8 @@ class RecordingManager {
             // Request camera and microphone access
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: { ideal: 640 },  // Lower resolution
-                    height: { ideal: 480 }
+                    width: { ideal: 320 },  // Very low resolution
+                    height: { ideal: 240 }
                 },
                 audio: {
                     echoCancellation: true,
@@ -36,23 +33,30 @@ class RecordingManager {
         }
     }
 
-    startRecording(participantName, passcode) {
+    setParticipantInfo(firstName, lastName, passcode) {
+        this.participantInfo = {
+            firstName: firstName,
+            lastName: lastName,
+            fullName: `${firstName} ${lastName}`,
+            passcode: passcode
+        };
+    }
+
+    startQuestionRecording(questionNumber) {
         if (!this.stream) {
             console.error('No media stream available');
             return false;
         }
 
-        this.participantName = participantName;
-        this.passcode = passcode;
+        this.currentQuestion = questionNumber;
         this.recordedChunks = [];
-        this.audioChunks = [];
 
         try {
-            // VIDEO + AUDIO recording (heavily compressed)
+            // ULTRA COMPRESSED VIDEO (potato quality for fast upload)
             const videoOptions = {
                 mimeType: 'video/webm;codecs=vp8,opus',
-                videoBitsPerSecond: 250000,  // 250 kbps - very low quality video
-                audioBitsPerSecond: 128000   // 128 kbps - good audio
+                videoBitsPerSecond: 100000,  // 100 kbps - potato quality
+                audioBitsPerSecond: 96000    // 96 kbps - decent audio
             };
 
             if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) {
@@ -67,32 +71,14 @@ class RecordingManager {
                 }
             };
 
-            // AUDIO-ONLY recording (separate, for backup)
-            const audioTrack = this.stream.getAudioTracks()[0];
-            this.audioStream = new MediaStream([audioTrack]);
-            
-            const audioOptions = {
-                mimeType: 'audio/webm;codecs=opus',
-                audioBitsPerSecond: 128000
-            };
-
-            this.audioRecorder = new MediaRecorder(this.audioStream, audioOptions);
-
-            this.audioRecorder.ondataavailable = (event) => {
-                if (event.data && event.data.size > 0) {
-                    this.audioChunks.push(event.data);
-                }
-            };
-
-            // Start both recordings
+            // Start recording
             this.mediaRecorder.start(1000);
-            this.audioRecorder.start(1000);
             this.isRecording = true;
 
             // Show recording indicator
             document.getElementById('recordingIndicator').classList.add('active');
 
-            console.log('Recording started (video + separate audio)');
+            console.log(`Question ${questionNumber} recording started`);
             return true;
         } catch (error) {
             console.error('Error starting recording:', error);
@@ -100,123 +86,69 @@ class RecordingManager {
         }
     }
 
-    stopRecording() {
+    stopQuestionRecording() {
         return new Promise((resolve, reject) => {
             if (!this.mediaRecorder || !this.isRecording) {
                 reject(new Error('No active recording'));
                 return;
             }
 
-            let videoStopped = false;
-            let audioStopped = false;
-
-            const checkBothStopped = () => {
-                if (videoStopped && audioStopped) {
-                    this.isRecording = false;
-                    
-                    // Hide recording indicator
-                    document.getElementById('recordingIndicator').classList.remove('active');
-
-                    // Create video blob
-                    const videoBlob = new Blob(this.recordedChunks, {
-                        type: 'video/webm'
-                    });
-
-                    // Create audio blob
-                    const audioBlob = new Blob(this.audioChunks, {
-                        type: 'audio/webm'
-                    });
-
-                    console.log('Recording stopped');
-                    console.log('Video blob size:', videoBlob.size);
-                    console.log('Audio blob size:', audioBlob.size);
-
-                    // Stop all tracks
-                    if (this.stream) {
-                        this.stream.getTracks().forEach(track => track.stop());
-                    }
-
-                    resolve({ videoBlob, audioBlob });
-                }
-            };
-
             this.mediaRecorder.onstop = () => {
-                videoStopped = true;
-                checkBothStopped();
-            };
+                this.isRecording = false;
+                
+                // Create blob from recorded chunks
+                const blob = new Blob(this.recordedChunks, {
+                    type: 'video/webm'
+                });
 
-            this.audioRecorder.onstop = () => {
-                audioStopped = true;
-                checkBothStopped();
+                console.log(`Question ${this.currentQuestion} recording stopped, blob size:`, blob.size);
+
+                resolve(blob);
             };
 
             this.mediaRecorder.stop();
-            this.audioRecorder.stop();
         });
     }
 
-    async uploadRecording(videoBlob, audioBlob) {
+    async uploadQuestionRecording(blob) {
         const timestamp = new Date().toISOString();
-        const baseFilename = `${this.passcode}_${this.participantName.replace(/\s+/g, '_')}_${timestamp}`;
+        const filename = `Question_${this.currentQuestion}_${timestamp}.webm`;
+
+        const formData = new FormData();
+        formData.append('video', blob, filename);
+        formData.append('firstName', this.participantInfo.firstName);
+        formData.append('lastName', this.participantInfo.lastName);
+        formData.append('passcode', this.participantInfo.passcode);
+        formData.append('questionNumber', this.currentQuestion);
+        formData.append('timestamp', timestamp);
 
         try {
-            // Upload AUDIO first (small, reliable)
-            console.log('Uploading audio...');
-            const audioFormData = new FormData();
-            audioFormData.append('video', audioBlob, `${baseFilename}_AUDIO.webm`);
-            audioFormData.append('participantName', this.participantName);
-            audioFormData.append('passcode', this.passcode);
-            audioFormData.append('timestamp', timestamp);
-            audioFormData.append('type', 'audio');
-
-            const audioResponse = await fetch('/api/upload', {
+            const response = await fetch('/api/upload', {
                 method: 'POST',
-                body: audioFormData
+                body: formData
             });
 
-            if (!audioResponse.ok) {
-                throw new Error(`Audio upload failed: ${audioResponse.statusText}`);
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.statusText}`);
             }
 
-            const audioResult = await audioResponse.json();
-            console.log('Audio uploaded successfully:', audioResult);
-
-            // Upload VIDEO (larger, might fail)
-            console.log('Uploading video...');
-            const videoFormData = new FormData();
-            videoFormData.append('video', videoBlob, `${baseFilename}_VIDEO.webm`);
-            videoFormData.append('participantName', this.participantName);
-            videoFormData.append('passcode', this.passcode);
-            videoFormData.append('timestamp', timestamp);
-            videoFormData.append('type', 'video');
-
-            const videoResponse = await fetch('/api/upload', {
-                method: 'POST',
-                body: videoFormData
-            });
-
-            if (!videoResponse.ok) {
-                console.warn('Video upload failed, but audio succeeded');
-                return {
-                    success: true,
-                    audioOnly: true,
-                    audio: audioResult,
-                    videoError: videoResponse.statusText
-                };
-            }
-
-            const videoResult = await videoResponse.json();
-            console.log('Video uploaded successfully:', videoResult);
-
-            return {
-                success: true,
-                audio: audioResult,
-                video: videoResult
-            };
-
+            const result = await response.json();
+            console.log(`Question ${this.currentQuestion} uploaded:`, result);
+            return result;
         } catch (error) {
             console.error('Upload error:', error);
             throw error;
+        }
+    }
+
+    stopAllRecording() {
+        // Hide recording indicator
+        document.getElementById('recordingIndicator').classList.remove('active');
+        
+        // Stop all tracks
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
         }
     }
 }
