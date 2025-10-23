@@ -86,11 +86,17 @@ function stopTimer() {
 }
 
 function stopAllVideos() {
-    // Stop instructions video
-    const videoInstructions = document.getElementById('videoInstructions');
-    if (videoInstructions) {
-        videoInstructions.pause();
-        videoInstructions.currentTime = 0;
+    // Stop both instruction videos
+    const videoInstructionsEnglish = document.getElementById('videoInstructionsEnglish');
+    if (videoInstructionsEnglish) {
+        videoInstructionsEnglish.pause();
+        videoInstructionsEnglish.currentTime = 0;
+    }
+
+    const videoInstructionsNonEnglish = document.getElementById('videoInstructionsNonEnglish');
+    if (videoInstructionsNonEnglish) {
+        videoInstructionsNonEnglish.pause();
+        videoInstructionsNonEnglish.currentTime = 0;
     }
 
     // Stop all question videos (Q1-5 are all videos now)
@@ -288,6 +294,11 @@ async function checkTestCompletion() {
 
         const data = await response.json();
 
+        // Check if we got valid data
+        if (!response.ok || !data.success || !data.completed) {
+            throw new Error('Invalid response from server');
+        }
+
         // Update UI based on completion status
         if (data.completed.english) {
             englishCard.classList.add('disabled');
@@ -316,6 +327,11 @@ async function checkTestCompletion() {
     } catch (error) {
         console.error('Error checking completion:', error);
         // If error, just show both tests as available
+        englishStatus.className = 'test-card-status available';
+        englishStatus.textContent = 'Click to Begin';
+        nonEnglishStatus.className = 'test-card-status available';
+        nonEnglishStatus.textContent = 'Click to Begin';
+
         loadingDiv.style.display = 'none';
         selectionDiv.style.display = 'block';
     }

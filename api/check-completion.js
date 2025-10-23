@@ -1,7 +1,11 @@
 import { google } from 'googleapis';
-import fs from 'fs';
 
 export default async function checkCompletionHandler(req, res) {
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
     const { passcode } = req.body;
 
@@ -9,19 +13,21 @@ export default async function checkCompletionHandler(req, res) {
       return res.status(400).json({ error: 'Passcode is required' });
     }
 
-    // Load service account credentials
-    const credentials = JSON.parse(
-      fs.readFileSync('./service-account-key.json', 'utf8')
-    );
-
-    // Initialize Google Drive API
+    // Authenticate with Google Drive using environment variables
     const auth = new google.auth.GoogleAuth({
-      credentials,
-      scopes: ['https://www.googleapis.com/auth/drive'],
+      credentials: {
+        type: 'service_account',
+        project_id: process.env.GOOGLE_PROJECT_ID,
+        private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
+        private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+      },
+      scopes: ['https://www.googleapis.com/auth/drive.file'],
     });
 
     const drive = google.drive({ version: 'v3', auth });
-    const folderId = '1rrWA_VK-G5HQd-iL_gH3IsCPNbWkxsRJ';
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
     // Check for English test completion
     const englishQuery = `'${folderId}' in parents and name contains '${passcode}' and name contains 'ENGLISH' and mimeType='video/webm'`;
