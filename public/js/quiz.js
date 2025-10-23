@@ -361,7 +361,7 @@ window.addEventListener('beforeunload', function() {
     
     // Stop preview if active
     if (previewStream) {
-        previewStream.getTracks().forEach(track => track.stop();
+        previewStream.getTracks().forEach(track => track.stop());
     }
     
     if (window.recordingManager) {
