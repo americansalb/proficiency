@@ -181,13 +181,9 @@ async function goToPage(pageNumber) {
             }
             if (stopBtn) stopBtn.style.display = 'none';
 
-            // Connect camera stream to preview immediately
-            if (window.recordingManager) {
-                window.recordingManager.requestPermissions().then(() => {
-                    if (window.recordingManager.stream && previewVideo) {
-                        previewVideo.srcObject = window.recordingManager.stream;
-                    }
-                });
+            // Connect existing camera stream to preview (don't request permissions again!)
+            if (window.recordingManager && window.recordingManager.stream && previewVideo) {
+                previewVideo.srcObject = window.recordingManager.stream;
             }
 
             // Reset repeat button and counter display for this question
