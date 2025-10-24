@@ -121,24 +121,12 @@ async function goToPage(pageNumber) {
     try {
         const previousPage = currentPage;
 
-        // If leaving a question page, stop timer and upload in background (non-blocking)
+        // If leaving a question page, stop timer
         if (previousPage >= 6 && previousPage <= 10 && pageNumber !== previousPage) {
-            const questionNum = previousPage - 5;
-
             // Stop timer
             stopTimer();
 
-            if (window.recordingManager) {
-                try {
-                    const blob = await window.recordingManager.stopQuestionRecording();
-                    // Upload in background - don't wait!
-                    window.recordingManager.uploadQuestionRecording(blob, questionNum).catch(err => {
-                        console.error(`Background upload Q${questionNum} failed:`, err);
-                    });
-                } catch (err) {
-                    console.error(`Error stopping Q${questionNum}:`, err);
-                }
-            }
+            // No per-question recording - continuous recording handles everything
         }
 
         // Stop all videos before changing pages
@@ -249,49 +237,13 @@ const recordedBlobs = {};
 let currentRecordingQuestion = null;
 
 function startRecording(questionNum) {
-    // Hide start button, show stop button
-    const startBtn = document.getElementById('startRecordBtn' + questionNum);
-    const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
-
-    if (startBtn) startBtn.style.display = 'none';
-    if (stopBtn) stopBtn.style.display = 'inline-block';
-
-    // Track current question
-    currentRecordingQuestion = questionNum;
-
-    // Start recording
-    if (window.recordingManager) {
-        window.recordingManager.startQuestionRecording(questionNum);
-    }
+    // Continuous recording handles everything automatically - no manual control needed
+    console.log(`Question ${questionNum} - continuous recording already in progress`);
 }
 
 async function stopRecording(questionNum) {
-    // Hide stop button, show start button
-    const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
-    const startBtn = document.getElementById('startRecordBtn' + questionNum);
-
-    if (stopBtn) stopBtn.style.display = 'none';
-    if (startBtn) startBtn.style.display = 'inline-block';
-
-    // Stop recording and get blob
-    if (window.recordingManager) {
-        try {
-            const blob = await window.recordingManager.stopQuestionRecording();
-            recordedBlobs[questionNum] = blob;
-
-            // Show modal with playback preview
-            const modal = document.getElementById('playbackModal');
-            const modalVideo = document.getElementById('modalPlaybackVideo');
-
-            if (modal && modalVideo && blob) {
-                modalVideo.src = URL.createObjectURL(blob);
-                modal.classList.add('active');
-            }
-        } catch (error) {
-            console.error('Error stopping recording:', error);
-            alert('Error stopping recording. Please try again.');
-        }
-    }
+    // Continuous recording handles everything automatically - no manual control needed
+    console.log(`Question ${questionNum} - continuous recording will continue until test completion`);
 }
 
 function eraseRecordingModal() {
@@ -316,32 +268,8 @@ function eraseRecordingModal() {
 async function submitResponseModal() {
     const questionNum = currentRecordingQuestion;
 
-    // Get the recorded blob
-    const blob = recordedBlobs[questionNum];
-
-    if (!blob) {
-        alert('No recording found. Please record your response first.');
-        return;
-    }
-
-    // Hide modal
-    const modal = document.getElementById('playbackModal');
-    const modalVideo = document.getElementById('modalPlaybackVideo');
-
-    if (modal) modal.classList.remove('active');
-    if (modalVideo) {
-        URL.revokeObjectURL(modalVideo.src);
-        modalVideo.src = '';
-    }
-
-    // Upload in background
-    if (window.recordingManager) {
-        window.recordingManager.uploadQuestionRecording(blob, questionNum).catch(err => {
-            console.error(`Upload Q${questionNum} failed:`, err);
-        });
-    }
-
-    // Move to next question or complete test
+    // With continuous recording, there's no modal or per-question submission
+    // Just move to the next question
     if (questionNum < 5) {
         goToPage(questionNum + 6); // Next question page
     } else {
@@ -750,14 +678,8 @@ async function completeTest() {
         document.getElementById('uploadSpinner').style.display = 'block';
         document.getElementById('uploadMessage').textContent = 'Finalizing uploads...';
 
-        // Stop Q5 recording and upload it
+        // Stop and upload continuous recording (full session)
         if (window.recordingManager) {
-            const blob = await window.recordingManager.stopQuestionRecording();
-            window.recordingManager.uploadQuestionRecording(blob, 5).catch(err => {
-                console.error('Q5 upload failed:', err);
-            });
-
-            // Stop and upload continuous anti-cheat recording
             document.getElementById('uploadMessage').textContent = 'Uploading full session recording...';
             try {
                 const continuousBlob = await window.recordingManager.stopContinuousRecording();
@@ -765,38 +687,7 @@ async function completeTest() {
                 console.log('Continuous recording uploaded successfully');
             } catch (err) {
                 console.error('Continuous recording upload failed:', err);
-                // Don't fail the whole test if continuous recording fails
-            }
-
-            // Wait for all pending uploads to complete
-            document.getElementById('uploadMessage').textContent = 'Finalizing uploads...';
-            await window.recordingManager.waitForAllUploads();
-
-            // Combine videos into one file
-            document.getElementById('uploadMessage').textContent = 'Combining videos...';
-
-            try {
-                const combineResponse = await fetch('/api/combine', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        firstName: window.testCredentials.firstName,
-                        lastName: window.testCredentials.lastName,
-                        passcode: window.testCredentials.passcode,
-                        testType: window.testCredentials.testType
-                    })
-                });
-
-                if (combineResponse.ok) {
-                    console.log('Videos combined successfully');
-                } else {
-                    console.error('Video combination failed');
-                }
-            } catch (error) {
-                console.error('Error combining videos:', error);
-                // Don't fail the whole test if combination fails
+                throw err; // Fail if continuous recording fails
             }
         }
 
