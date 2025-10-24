@@ -692,35 +692,17 @@ function repeatVideo(questionNumber) {
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
 
-        // Reset UI elements
-        const startBtn = document.getElementById('startRecordBtn' + questionNumber);
-        const stopBtn = document.getElementById('stopRecordBtn' + questionNumber);
+        // DON'T reset UI elements - keep recording state as-is
+        // DON'T clear recorded blob - we want continuous recording
+        // DON'T stop the recording - let it continue!
 
-        // Reset buttons - show start button, hide stop button
-        if (startBtn) {
-            startBtn.style.display = 'inline-block';
-        }
-        if (stopBtn) stopBtn.style.display = 'none';
-
-        // Clear any recorded blob
-        delete recordedBlobs[questionNumber];
-
-        // Stop current recording if active
-        if (window.recordingManager?.isRecording) {
-            window.recordingManager.stopQuestionRecording().catch(err => {
-                console.error('Error stopping recording on repeat:', err);
-            });
-        }
-
-        // Play video
+        // Just replay the video - that's all!
         const video = document.getElementById('video' + questionNumber);
         if (video) {
             video.currentTime = 0;
 
-            // When video ends, just log (button already enabled)
-            video.onended = () => {
-                startRecordingCountdown(questionNumber);
-            };
+            // DON'T call startRecordingCountdown on video end - recording already in progress
+            video.onended = null;
 
             video.play().catch(err => {
                 console.log('Video play prevented:', err);
