@@ -88,8 +88,11 @@ class RecordingManager {
             this.mediaRecorder.start(1000);
             this.isRecording = true;
 
-            // Show recording indicator
-            document.getElementById('recordingIndicator').classList.add('active');
+            // Show recording indicator (if it exists)
+            const indicator = document.getElementById('recordingIndicator');
+            if (indicator) {
+                indicator.classList.add('active');
+            }
 
             console.log(`Question ${questionNumber} recording started`);
             return true;
@@ -102,7 +105,16 @@ class RecordingManager {
     stopQuestionRecording() {
         return new Promise((resolve, reject) => {
             if (!this.mediaRecorder || !this.isRecording) {
-                reject(new Error('No active recording'));
+                // If recording already stopped but we have chunks, return them
+                if (this.recordedChunks.length > 0) {
+                    const blob = new Blob(this.recordedChunks, {
+                        type: 'video/webm'
+                    });
+                    console.log(`Recording already stopped, returning existing blob size:`, blob.size);
+                    resolve(blob);
+                } else {
+                    reject(new Error('No active recording'));
+                }
                 return;
             }
 
@@ -179,8 +191,11 @@ class RecordingManager {
     }
 
     stopAllRecording() {
-        // Hide recording indicator
-        document.getElementById('recordingIndicator').classList.remove('active');
+        // Hide recording indicator (if it exists)
+        const indicator = document.getElementById('recordingIndicator');
+        if (indicator) {
+            indicator.classList.remove('active');
+        }
 
         // Stop all tracks
         if (this.stream) {
