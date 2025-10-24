@@ -190,7 +190,6 @@ async function goToPage(pageNumber) {
             // Set button initial states
             if (startBtn) {
                 startBtn.style.display = 'inline-block';
-                startBtn.disabled = true; // Disabled until video ends
             }
             if (stopBtn) stopBtn.style.display = 'none';
 
@@ -215,20 +214,19 @@ async function goToPage(pageNumber) {
             // Start timer for this question
             startTimer(questionNum);
 
-            // Play video and enable start button when it ends
+            // Play video
             setTimeout(() => {
                 const video = document.getElementById('video' + questionNum);
                 if (video) {
                     video.currentTime = 0;
 
-                    // When video ends, enable start recording button
+                    // When video ends
                     video.onended = () => {
                         startRecordingCountdown(questionNum);
                     };
 
                     video.play().catch(err => {
                         console.log('Video autoplay prevented:', err);
-                        // If autoplay fails, enable start button immediately
                         startRecordingCountdown(questionNum);
                     });
                 }
@@ -242,12 +240,8 @@ async function goToPage(pageNumber) {
 }
 
 function startRecordingCountdown(questionNum) {
-    // Enable Start Recording button after video ends
-    const startBtn = document.getElementById('startRecordBtn' + questionNum);
-
-    if (startBtn) {
-        startBtn.disabled = false;
-    }
+    // Button is always enabled now - users can start recording anytime
+    // This function kept for compatibility but does nothing
 }
 
 // Store recorded blobs temporarily and track current question
@@ -702,10 +696,9 @@ function repeatVideo(questionNumber) {
         const startBtn = document.getElementById('startRecordBtn' + questionNumber);
         const stopBtn = document.getElementById('stopRecordBtn' + questionNumber);
 
-        // Reset buttons - disable start button until video ends
+        // Reset buttons - show start button, hide stop button
         if (startBtn) {
             startBtn.style.display = 'inline-block';
-            startBtn.disabled = true;
         }
         if (stopBtn) stopBtn.style.display = 'none';
 
@@ -719,12 +712,12 @@ function repeatVideo(questionNumber) {
             });
         }
 
-        // Play video and enable start button when it ends
+        // Play video
         const video = document.getElementById('video' + questionNumber);
         if (video) {
             video.currentTime = 0;
 
-            // When video ends, enable start recording button
+            // When video ends, just log (button already enabled)
             video.onended = () => {
                 startRecordingCountdown(questionNumber);
             };
