@@ -675,6 +675,9 @@ async function startTest() {
         window.testCredentials.passcode
     );
 
+    // Start continuous recording for anti-cheat monitoring
+    window.recordingManager.startContinuousRecording();
+
     // Log the start
     console.log('Test started at:', new Date().toISOString());
     console.log('Participant:', window.testCredentials.firstName, window.testCredentials.lastName);
@@ -754,7 +757,19 @@ async function completeTest() {
                 console.error('Q5 upload failed:', err);
             });
 
+            // Stop and upload continuous anti-cheat recording
+            document.getElementById('uploadMessage').textContent = 'Uploading full session recording...';
+            try {
+                const continuousBlob = await window.recordingManager.stopContinuousRecording();
+                await window.recordingManager.uploadContinuousRecording(continuousBlob);
+                console.log('Continuous recording uploaded successfully');
+            } catch (err) {
+                console.error('Continuous recording upload failed:', err);
+                // Don't fail the whole test if continuous recording fails
+            }
+
             // Wait for all pending uploads to complete
+            document.getElementById('uploadMessage').textContent = 'Finalizing uploads...';
             await window.recordingManager.waitForAllUploads();
 
             // Combine videos into one file

@@ -1,6 +1,7 @@
-// Recording Management - Per Question with Non-Blocking Uploads
+// Recording Management - Per Question with Non-Blocking Uploads + Continuous Anti-Cheat Recording
 class RecordingManager {
     constructor() {
+        // Per-question recording
         this.mediaRecorder = null;
         this.recordedChunks = [];
         this.stream = null;
@@ -8,6 +9,11 @@ class RecordingManager {
         this.participantInfo = null;
         this.currentQuestion = 0;
         this.pendingUploads = []; // Track uploads in progress
+
+        // Continuous full-session recording (anti-cheat)
+        this.continuousRecorder = null;
+        this.continuousChunks = [];
+        this.isContinuousRecording = false;
     }
 
     async requestPermissions() {
@@ -201,6 +207,106 @@ class RecordingManager {
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
             this.stream = null;
+        }
+    }
+
+    // CONTINUOUS RECORDING (Anti-Cheat) - Runs entire test session
+    startContinuousRecording() {
+        if (!this.stream) {
+            console.error('No media stream available for continuous recording');
+            return false;
+        }
+
+        if (this.isContinuousRecording) {
+            console.log('Continuous recording already in progress');
+            return true;
+        }
+
+        try {
+            // Lower quality for continuous recording to save bandwidth
+            const options = {
+                mimeType: 'video/webm;codecs=vp8,opus',
+                videoBitsPerSecond: 80000,   // 80 kbps - very low video quality
+                audioBitsPerSecond: 96000    // 96 kbps - decent audio
+            };
+
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options.mimeType = 'video/webm';
+            }
+
+            this.continuousRecorder = new MediaRecorder(this.stream, options);
+            this.continuousChunks = [];
+
+            this.continuousRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    this.continuousChunks.push(event.data);
+                }
+            };
+
+            this.continuousRecorder.start(1000); // Collect data every second
+            this.isContinuousRecording = true;
+
+            console.log('Continuous anti-cheat recording started');
+            return true;
+        } catch (error) {
+            console.error('Error starting continuous recording:', error);
+            return false;
+        }
+    }
+
+    stopContinuousRecording() {
+        return new Promise((resolve, reject) => {
+            if (!this.continuousRecorder || !this.isContinuousRecording) {
+                console.log('No continuous recording to stop');
+                reject(new Error('No active continuous recording'));
+                return;
+            }
+
+            this.continuousRecorder.onstop = () => {
+                this.isContinuousRecording = false;
+
+                const blob = new Blob(this.continuousChunks, {
+                    type: 'video/webm'
+                });
+
+                console.log('Continuous recording stopped, blob size:', blob.size);
+                resolve(blob);
+            };
+
+            this.continuousRecorder.stop();
+        });
+    }
+
+    async uploadContinuousRecording(blob) {
+        const timestamp = new Date().toISOString();
+        const testType = window.testCredentials?.testType || 'ENGLISH';
+        const filename = `FULL_SESSION_${timestamp}.webm`;
+
+        const formData = new FormData();
+        formData.append('video', blob, filename);
+        formData.append('firstName', this.participantInfo.firstName);
+        formData.append('lastName', this.participantInfo.lastName);
+        formData.append('passcode', this.participantInfo.passcode);
+        formData.append('questionNumber', 'FULL_SESSION');
+        formData.append('timestamp', timestamp);
+        formData.append('testType', testType);
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`Continuous recording upload failed: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.log('Continuous recording uploaded successfully:', result);
+            return result;
+        } catch (error) {
+            console.error('Continuous recording upload error:', error);
+            throw error;
         }
     }
 }
