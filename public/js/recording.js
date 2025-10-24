@@ -49,6 +49,18 @@ class RecordingManager {
             return false;
         }
 
+        // SAFEGUARD: Don't restart recording if we're already recording this question
+        // This prevents the recording from restarting when user replays the media
+        if (this.isRecording && this.currentQuestion === questionNumber) {
+            console.log(`Already recording Question ${questionNumber}, continuing...`);
+            return true;
+        }
+
+        // If we're recording a different question, stop it first
+        if (this.isRecording && this.currentQuestion !== questionNumber) {
+            console.warn(`Switching from Question ${this.currentQuestion} to ${questionNumber}`);
+        }
+
         this.currentQuestion = questionNumber;
         this.recordedChunks = [];
 
