@@ -1,7 +1,7 @@
 // Recording Management - Per Question with Non-Blocking Uploads + Continuous Anti-Cheat Recording
 class RecordingManager {
     constructor() {
-        // Per-question recording
+        // Per-question recording (user-controlled)
         this.mediaRecorder = null;
         this.recordedChunks = [];
         this.stream = null;
@@ -10,9 +10,10 @@ class RecordingManager {
         this.currentQuestion = 0;
         this.pendingUploads = []; // Track uploads in progress
 
-        // Continuous full-session recording (anti-cheat)
+        // Continuous full-session recording (anti-cheat, background)
         this.continuousRecorder = null;
         this.continuousChunks = [];
+        this.continuousStream = null; // Cloned stream for continuous recording
         this.isContinuousRecording = false;
     }
 
@@ -223,6 +224,10 @@ class RecordingManager {
         }
 
         try {
+            // CRITICAL: Clone the stream so we can have two separate MediaRecorders
+            // One for per-question (user-controlled) and one for continuous (background)
+            this.continuousStream = this.stream.clone();
+
             // Lower quality for continuous recording to save bandwidth
             const options = {
                 mimeType: 'video/webm;codecs=vp8,opus',
@@ -234,7 +239,7 @@ class RecordingManager {
                 options.mimeType = 'video/webm';
             }
 
-            this.continuousRecorder = new MediaRecorder(this.stream, options);
+            this.continuousRecorder = new MediaRecorder(this.continuousStream, options);
             this.continuousChunks = [];
 
             this.continuousRecorder.ondataavailable = (event) => {
@@ -246,7 +251,7 @@ class RecordingManager {
             this.continuousRecorder.start(1000); // Collect data every second
             this.isContinuousRecording = true;
 
-            console.log('Continuous anti-cheat recording started');
+            console.log('Continuous anti-cheat recording started (on cloned stream)');
             return true;
         } catch (error) {
             console.error('Error starting continuous recording:', error);

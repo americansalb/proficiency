@@ -237,13 +237,49 @@ const recordedBlobs = {};
 let currentRecordingQuestion = null;
 
 function startRecording(questionNum) {
-    // Continuous recording handles everything automatically - no manual control needed
-    console.log(`Question ${questionNum} - continuous recording already in progress`);
+    // Hide start button, show stop button
+    const startBtn = document.getElementById('startRecordBtn' + questionNum);
+    const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
+
+    if (startBtn) startBtn.style.display = 'none';
+    if (stopBtn) stopBtn.style.display = 'inline-block';
+
+    // Track current question
+    currentRecordingQuestion = questionNum;
+
+    // Start per-question recording (separate from continuous anti-cheat recording)
+    if (window.recordingManager) {
+        window.recordingManager.startQuestionRecording(questionNum);
+    }
 }
 
 async function stopRecording(questionNum) {
-    // Continuous recording handles everything automatically - no manual control needed
-    console.log(`Question ${questionNum} - continuous recording will continue until test completion`);
+    // Hide stop button, show start button
+    const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
+    const startBtn = document.getElementById('startRecordBtn' + questionNum);
+
+    if (stopBtn) stopBtn.style.display = 'none';
+    if (startBtn) startBtn.style.display = 'inline-block';
+
+    // Stop per-question recording and get blob for preview
+    if (window.recordingManager) {
+        try {
+            const blob = await window.recordingManager.stopQuestionRecording();
+            recordedBlobs[questionNum] = blob;
+
+            // Show modal with playback preview
+            const modal = document.getElementById('playbackModal');
+            const modalVideo = document.getElementById('modalPlaybackVideo');
+
+            if (modal && modalVideo && blob) {
+                modalVideo.src = URL.createObjectURL(blob);
+                modal.classList.add('active');
+            }
+        } catch (error) {
+            console.error('Error stopping recording:', error);
+            alert('Error stopping recording. Please try again.');
+        }
+    }
 }
 
 function eraseRecordingModal() {
@@ -268,8 +304,32 @@ function eraseRecordingModal() {
 async function submitResponseModal() {
     const questionNum = currentRecordingQuestion;
 
-    // With continuous recording, there's no modal or per-question submission
-    // Just move to the next question
+    // Get the recorded blob
+    const blob = recordedBlobs[questionNum];
+
+    if (!blob) {
+        alert('No recording found. Please record your response first.');
+        return;
+    }
+
+    // Hide modal
+    const modal = document.getElementById('playbackModal');
+    const modalVideo = document.getElementById('modalPlaybackVideo');
+
+    if (modal) modal.classList.remove('active');
+    if (modalVideo) {
+        URL.revokeObjectURL(modalVideo.src);
+        modalVideo.src = '';
+    }
+
+    // Upload per-question recording in background
+    if (window.recordingManager) {
+        window.recordingManager.uploadQuestionRecording(blob, questionNum).catch(err => {
+            console.error(`Upload Q${questionNum} failed:`, err);
+        });
+    }
+
+    // Move to next question or complete test
     if (questionNum < 5) {
         goToPage(questionNum + 6); // Next question page
     } else {
@@ -678,8 +738,13 @@ async function completeTest() {
         document.getElementById('uploadSpinner').style.display = 'block';
         document.getElementById('uploadMessage').textContent = 'Finalizing uploads...';
 
-        // Stop and upload continuous recording (full session)
+        // Stop and upload both recordings
         if (window.recordingManager) {
+            // Wait for all pending per-question uploads to complete
+            document.getElementById('uploadMessage').textContent = 'Finalizing question uploads...';
+            await window.recordingManager.waitForAllUploads();
+
+            // Stop and upload continuous anti-cheat recording
             document.getElementById('uploadMessage').textContent = 'Uploading full session recording...';
             try {
                 const continuousBlob = await window.recordingManager.stopContinuousRecording();
@@ -688,6 +753,32 @@ async function completeTest() {
             } catch (err) {
                 console.error('Continuous recording upload failed:', err);
                 throw err; // Fail if continuous recording fails
+            }
+
+            // Combine per-question videos into one file
+            document.getElementById('uploadMessage').textContent = 'Combining videos...';
+            try {
+                const combineResponse = await fetch('/api/combine', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        firstName: window.testCredentials.firstName,
+                        lastName: window.testCredentials.lastName,
+                        passcode: window.testCredentials.passcode,
+                        testType: window.testCredentials.testType
+                    })
+                });
+
+                if (combineResponse.ok) {
+                    console.log('Videos combined successfully');
+                } else {
+                    console.error('Video combination failed');
+                }
+            } catch (error) {
+                console.error('Error combining videos:', error);
+                // Don't fail the whole test if combination fails
             }
         }
 
