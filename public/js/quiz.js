@@ -11,21 +11,96 @@ const repeatCounts = {
 let currentPage = 1;
 let isChangingPage = false; // Prevent double-clicks
 
+// Timer variables
+let timerInterval = null;
+let timeRemaining = 1500; // 25 minutes in seconds
+
 // Preview stream for equipment test
 let previewStream = null;
 let audioContext = null;
 let audioAnalyser = null;
 
-function stopAllVideos() {
-    // Stop instructions video
-    const videoInstructions = document.getElementById('videoInstructions');
-    if (videoInstructions) {
-        videoInstructions.pause();
-        videoInstructions.currentTime = 0;
+function startTimer(questionNumber) {
+    // Don't reset timer - it should continue across all questions
+    // Only initialize on first question
+    if (questionNumber === 1) {
+        timeRemaining = 1500; // 25 minutes total for all questions
     }
 
-    // Stop question videos (Q1 is iframe, Q2-5 are videos)
-    for (let i = 2; i <= 5; i++) {
+    // Clear any existing timer interval
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+
+    const timerDisplay = document.getElementById('timerDisplay' + questionNumber);
+    const timerContainer = document.getElementById('timer' + questionNumber);
+
+    // Update display immediately
+    updateTimerDisplay(timerDisplay, timerContainer);
+
+    // Start countdown
+    timerInterval = setInterval(() => {
+        timeRemaining--;
+
+        updateTimerDisplay(timerDisplay, timerContainer);
+
+        // Time's up - auto advance
+        if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+
+            // Auto-advance to next question or complete test
+            if (questionNumber < 5) {
+                goToPage(questionNumber + 5); // Next question page
+            } else {
+                completeTest(); // Last question, complete test
+            }
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay(timerDisplay, timerContainer) {
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    timerDisplay.textContent = formattedTime;
+
+    // Remove all warning classes first
+    timerContainer.classList.remove('warning', 'danger');
+
+    // Add warning when under 5 minutes
+    if (timeRemaining <= 300 && timeRemaining > 120) {
+        timerContainer.classList.add('warning');
+    }
+    // Add danger when under 2 minutes
+    else if (timeRemaining <= 120) {
+        timerContainer.classList.add('danger');
+    }
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+function stopAllVideos() {
+    // Stop both instruction videos
+    const videoInstructionsEnglish = document.getElementById('videoInstructionsEnglish');
+    if (videoInstructionsEnglish) {
+        videoInstructionsEnglish.pause();
+        videoInstructionsEnglish.currentTime = 0;
+    }
+
+    const videoInstructionsNonEnglish = document.getElementById('videoInstructionsNonEnglish');
+    if (videoInstructionsNonEnglish) {
+        videoInstructionsNonEnglish.pause();
+        videoInstructionsNonEnglish.currentTime = 0;
+    }
+
+    // Stop all question videos (Q1-5 are all videos now)
+    for (let i = 1; i <= 5; i++) {
         const video = document.getElementById('video' + i);
         if (video) {
             video.pause();
@@ -46,12 +121,23 @@ async function goToPage(pageNumber) {
     try {
         const previousPage = currentPage;
 
-        // If leaving a question page (5-9), mark question as finished (non-blocking)
-        if (previousPage >= 5 && previousPage <= 9 && pageNumber !== previousPage) {
-            const questionNum = previousPage - 4;
-            // Non-blocking - just marks boundary and queues upload
+        // If leaving a question page, stop timer and upload in background (non-blocking)
+        if (previousPage >= 6 && previousPage <= 10 && pageNumber !== previousPage) {
+            const questionNum = previousPage - 5;
+
+            // Stop timer
+            stopTimer();
+
             if (window.recordingManager) {
-                window.recordingManager.finishQuestion(questionNum);
+                try {
+                    const blob = await window.recordingManager.stopQuestionRecording();
+                    // Upload in background - don't wait!
+                    window.recordingManager.uploadQuestionRecording(blob, questionNum).catch(err => {
+                        console.error(`Background upload Q${questionNum} failed:`, err);
+                    });
+                } catch (err) {
+                    console.error(`Error stopping Q${questionNum}:`, err);
+                }
             }
         }
 
@@ -73,7 +159,9 @@ async function goToPage(pageNumber) {
         // Auto-play instructions video on page 2
         if (pageNumber === 2) {
             setTimeout(() => {
-                const videoInstructions = document.getElementById('videoInstructions');
+                const testType = window.testCredentials?.testType || 'ENGLISH';
+                const videoId = testType === 'ENGLISH' ? 'videoInstructionsEnglish' : 'videoInstructionsNonEnglish';
+                const videoInstructions = document.getElementById(videoId);
                 if (videoInstructions) {
                     videoInstructions.currentTime = 0;
                     videoInstructions.play().catch(err => {
@@ -83,28 +171,66 @@ async function goToPage(pageNumber) {
             }, 300);
         }
 
-        // Auto-play video if it's a question page (5-9)
-        if (pageNumber >= 5 && pageNumber <= 9) {
-            const questionNum = pageNumber - 4;
+        // Setup equipment test on page 5
+        if (pageNumber === 5) {
+            setTimeout(() => {
+                setupEquipmentTest();
+            }, 500);
+        }
 
-            // Start recording for this NEW question
+        // Auto-play video if it's a question page (6-10)
+        if (pageNumber >= 6 && pageNumber <= 10) {
+            const questionNum = pageNumber - 5;
+
+            // Reset all UI elements for this question
+            const previewVideo = document.getElementById('previewStream' + questionNum);
+            const startBtn = document.getElementById('startRecordBtn' + questionNum);
+            const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
+
+            // Set button initial states
+            if (startBtn) {
+                startBtn.style.display = 'inline-block';
+            }
+            if (stopBtn) stopBtn.style.display = 'none';
+
+            // Connect camera stream to preview immediately
             if (window.recordingManager) {
-                window.recordingManager.startQuestionRecording(questionNum);
+                window.recordingManager.requestPermissions().then(() => {
+                    if (window.recordingManager.stream && previewVideo) {
+                        previewVideo.srcObject = window.recordingManager.stream;
+                    }
+                });
             }
 
-            // Question 1 uses iframe (will autoplay automatically)
-            // Questions 2-5 use video tags (play them)
-            if (questionNum > 1) {
-                setTimeout(() => {
-                    const video = document.getElementById('video' + questionNum);
-                    if (video) {
-                        video.currentTime = 0;
-                        video.play().catch(err => {
-                            console.log('Video autoplay prevented:', err);
-                        });
-                    }
-                }, 300);
+            // Reset repeat button and counter display for this question
+            const repeatButton = document.getElementById('repeat' + questionNum);
+            const counter = document.getElementById('counter' + questionNum);
+            if (repeatButton && counter) {
+                repeatButton.disabled = false;
+                repeatButton.textContent = '🔄 Repeat Question';
+                counter.textContent = `Repeats remaining: ${repeatCounts[questionNum]}`;
             }
+
+            // Start timer for this question
+            startTimer(questionNum);
+
+            // Play video
+            setTimeout(() => {
+                const video = document.getElementById('video' + questionNum);
+                if (video) {
+                    video.currentTime = 0;
+
+                    // When video ends
+                    video.onended = () => {
+                        startRecordingCountdown(questionNum);
+                    };
+
+                    video.play().catch(err => {
+                        console.log('Video autoplay prevented:', err);
+                        startRecordingCountdown(questionNum);
+                    });
+                }
+            }, 300);
         }
     } finally {
         setTimeout(() => {
@@ -113,22 +239,156 @@ async function goToPage(pageNumber) {
     }
 }
 
-function validatePasscode(passcode) {
-    // Remove any spaces or dashes
-    const cleaned = passcode.replace(/[\s-]/g, '');
-
-    // Check if it's a number
-    if (!/^\d+$/.test(cleaned)) {
-        return false;
-    }
-
-    const num = parseInt(cleaned);
-
-    // Check if it's in the valid range
-    return num >= 1089100800000 && num <= 1089100899999;
+function startRecordingCountdown(questionNum) {
+    // Button is always enabled now - users can start recording anytime
+    // This function kept for compatibility but does nothing
 }
 
-async function validateAndTestEquipment() {
+// Store recorded blobs temporarily and track current question
+const recordedBlobs = {};
+let currentRecordingQuestion = null;
+
+function startRecording(questionNum) {
+    // Hide start button, show stop button
+    const startBtn = document.getElementById('startRecordBtn' + questionNum);
+    const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
+
+    if (startBtn) startBtn.style.display = 'none';
+    if (stopBtn) stopBtn.style.display = 'inline-block';
+
+    // Track current question
+    currentRecordingQuestion = questionNum;
+
+    // Start recording
+    if (window.recordingManager) {
+        window.recordingManager.startQuestionRecording(questionNum);
+    }
+}
+
+async function stopRecording(questionNum) {
+    // Hide stop button, show start button
+    const stopBtn = document.getElementById('stopRecordBtn' + questionNum);
+    const startBtn = document.getElementById('startRecordBtn' + questionNum);
+
+    if (stopBtn) stopBtn.style.display = 'none';
+    if (startBtn) startBtn.style.display = 'inline-block';
+
+    // Stop recording and get blob
+    if (window.recordingManager) {
+        try {
+            const blob = await window.recordingManager.stopQuestionRecording();
+            recordedBlobs[questionNum] = blob;
+
+            // Show modal with playback preview
+            const modal = document.getElementById('playbackModal');
+            const modalVideo = document.getElementById('modalPlaybackVideo');
+
+            if (modal && modalVideo && blob) {
+                modalVideo.src = URL.createObjectURL(blob);
+                modal.classList.add('active');
+            }
+        } catch (error) {
+            console.error('Error stopping recording:', error);
+            alert('Error stopping recording. Please try again.');
+        }
+    }
+}
+
+function eraseRecordingModal() {
+    const questionNum = currentRecordingQuestion;
+
+    // Clear the recorded blob
+    delete recordedBlobs[questionNum];
+
+    // Hide modal
+    const modal = document.getElementById('playbackModal');
+    const modalVideo = document.getElementById('modalPlaybackVideo');
+
+    if (modal) modal.classList.remove('active');
+    if (modalVideo) {
+        URL.revokeObjectURL(modalVideo.src);
+        modalVideo.src = '';
+    }
+
+    // Reset buttons - start button should already be visible
+}
+
+async function submitResponseModal() {
+    const questionNum = currentRecordingQuestion;
+
+    // Get the recorded blob
+    const blob = recordedBlobs[questionNum];
+
+    if (!blob) {
+        alert('No recording found. Please record your response first.');
+        return;
+    }
+
+    // Hide modal
+    const modal = document.getElementById('playbackModal');
+    const modalVideo = document.getElementById('modalPlaybackVideo');
+
+    if (modal) modal.classList.remove('active');
+    if (modalVideo) {
+        URL.revokeObjectURL(modalVideo.src);
+        modalVideo.src = '';
+    }
+
+    // Upload in background
+    if (window.recordingManager) {
+        window.recordingManager.uploadQuestionRecording(blob, questionNum).catch(err => {
+            console.error(`Upload Q${questionNum} failed:`, err);
+        });
+    }
+
+    // Move to next question or complete test
+    if (questionNum < 5) {
+        goToPage(questionNum + 6); // Next question page
+    } else {
+        await completeTest();
+    }
+}
+
+async function finishQuestion(nextPage) {
+    // Prevent double-clicks
+    if (isChangingPage) return;
+
+    const questionNum = currentPage - 5; // Current question number (1-5)
+
+    // Hide done button for current question
+    const doneButton = document.getElementById('doneButton' + questionNum);
+
+    if (doneButton) {
+        doneButton.classList.remove('active');
+    }
+
+    // If this is the last question, complete the test
+    if (nextPage === 'complete') {
+        await completeTest();
+    } else {
+        // Navigate to next page (this will handle stopping/uploading recording)
+        goToPage(nextPage);
+    }
+}
+
+async function validatePasscode(passcode) {
+    // Call API to check if passcode is in Google Sheet
+    try {
+        const response = await fetch('/api/validate-passcode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passcode: passcode })
+        });
+
+        const data = await response.json();
+        return data.valid;
+    } catch (error) {
+        console.error('Error validating passcode:', error);
+        return false;
+    }
+}
+
+async function validateAndSelectTest() {
     const passcode = document.getElementById('passcodeInput').value;
     const check1 = document.getElementById('check1').checked;
     const check2 = document.getElementById('check2').checked;
@@ -138,8 +398,9 @@ async function validateAndTestEquipment() {
     const lastName = document.getElementById('lastName').value.trim();
     const errorMsg = document.getElementById('passcodeError');
 
-    // Validate passcode
-    if (!validatePasscode(passcode)) {
+    // Validate passcode (now async)
+    const isValidPasscode = await validatePasscode(passcode);
+    if (!isValidPasscode) {
         errorMsg.style.display = 'block';
         errorMsg.textContent = 'Invalid passcode. Please enter a valid passcode.';
         return;
@@ -169,13 +430,147 @@ async function validateAndTestEquipment() {
         passcode: passcode
     };
 
-    // Go to equipment test page
+    // Go to test selection page
     goToPage(4);
 
-    // Start equipment test
+    // Check which tests have been completed
     setTimeout(() => {
-        setupEquipmentTest();
+        checkTestCompletion();
     }, 500);
+}
+
+async function checkTestCompletion() {
+    const loadingDiv = document.getElementById('loadingTests');
+    const selectionDiv = document.getElementById('testSelection');
+    const englishCard = document.getElementById('englishTestCard');
+    const nonEnglishCard = document.getElementById('nonEnglishTestCard');
+    const englishStatus = document.getElementById('englishStatus');
+    const nonEnglishStatus = document.getElementById('nonEnglishStatus');
+
+    try {
+        loadingDiv.style.display = 'block';
+        selectionDiv.style.display = 'none';
+
+        // Call API to check completion
+        const response = await fetch('/api/check-completion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passcode: window.testCredentials.passcode })
+        });
+
+        const data = await response.json();
+
+        // Check if we got valid data
+        if (!response.ok || !data.success || !data.completed) {
+            throw new Error('Invalid response from server');
+        }
+
+        // Update UI based on completion status
+        if (data.completed.english) {
+            englishCard.classList.add('disabled');
+            englishCard.onclick = null;
+            englishStatus.className = 'test-card-status completed';
+            englishStatus.textContent = '✅ Already Completed';
+        } else {
+            englishStatus.className = 'test-card-status available';
+            englishStatus.textContent = 'Click to Begin';
+        }
+
+        if (data.completed.nonEnglish) {
+            nonEnglishCard.classList.add('disabled');
+            nonEnglishCard.onclick = null;
+            nonEnglishStatus.className = 'test-card-status completed';
+            nonEnglishStatus.textContent = '✅ Already Completed';
+        } else {
+            nonEnglishStatus.className = 'test-card-status available';
+            nonEnglishStatus.textContent = 'Click to Begin';
+        }
+
+        // Show selection
+        loadingDiv.style.display = 'none';
+        selectionDiv.style.display = 'block';
+
+    } catch (error) {
+        console.error('Error checking completion:', error);
+        // If error, just show both tests as available
+        englishStatus.className = 'test-card-status available';
+        englishStatus.textContent = 'Click to Begin';
+        nonEnglishStatus.className = 'test-card-status available';
+        nonEnglishStatus.textContent = 'Click to Begin';
+
+        loadingDiv.style.display = 'none';
+        selectionDiv.style.display = 'block';
+    }
+}
+
+function selectTest(testType) {
+    // Check if card is disabled
+    const card = testType === 'ENGLISH' ? document.getElementById('englishTestCard') : document.getElementById('nonEnglishTestCard');
+    if (card.classList.contains('disabled')) {
+        alert('You have already completed this test. Please select the other test or contact support.');
+        return;
+    }
+
+    // Store selected test type
+    window.testCredentials.testType = testType;
+
+    // Reset repeat counts for new test
+    repeatCounts[1] = 2;
+    repeatCounts[2] = 2;
+    repeatCounts[3] = 2;
+    repeatCounts[4] = 2;
+    repeatCounts[5] = 2;
+
+    // Load appropriate instructions
+    const englishInstr = document.getElementById('englishInstructions');
+    const nonEnglishInstr = document.getElementById('nonEnglishInstructions');
+
+    if (testType === 'ENGLISH') {
+        englishInstr.style.display = 'block';
+        nonEnglishInstr.style.display = 'none';
+    } else {
+        englishInstr.style.display = 'none';
+        nonEnglishInstr.style.display = 'block';
+    }
+
+    // Load question videos dynamically
+    loadQuestionVideos(testType);
+
+    // Go to instructions page
+    goToPage(2);
+}
+
+function loadQuestionVideos(testType) {
+    const videos = {
+        'ENGLISH': {
+            Q1: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761200967/Q1_ENG_tk3fkm.mp4',
+            Q2: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234687/PROF_ENG_Q2_u5h77u.mp4',
+            Q3: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234753/PROF_ENG_Q3_hv0vo8.mp4',
+            Q4: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234803/PROF_ENG_Q4_hvcuft.mp4',
+            Q5: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761234857/PROF_ENG_Q5_rswirk.mp4'
+        },
+        'NONENG': {
+            Q1: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239799/PROF_NONENG_Q1_ggc672.mp4',
+            Q2: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239798/PROF_NONENG_Q2_czmbue.mp4',
+            Q3: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239798/PROF_NONENG_Q3_r4rdtx.mp4',
+            Q4: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239799/PROF_NONENG_Q4_yjaueu.mp4',
+            Q5: 'https://res.cloudinary.com/dtkmtinqz/video/upload/v1761239798/PROF_NONENG_Q5_egz5j7.mp4'
+        }
+    };
+
+    const selectedVideos = videos[testType];
+
+    // Update video sources
+    for (let i = 1; i <= 5; i++) {
+        const video = document.getElementById('video' + i);
+        if (video) {
+            const source = video.querySelector('source');
+            if (source) {
+                source.src = selectedVideos['Q' + i];
+                video.load(); // Reload video with new source
+            }
+        }
+    }
 }
 
 async function setupEquipmentTest() {
@@ -285,8 +680,8 @@ async function startTest() {
     console.log('Participant:', window.testCredentials.firstName, window.testCredentials.lastName);
     console.log('Passcode:', window.testCredentials.passcode);
 
-    // Go to first question (page 5) - recording will start automatically
-    goToPage(5);
+    // Go to first question (page 6) - recording will start automatically
+    goToPage(6);
 }
 
 function repeatVideo(questionNumber) {
@@ -297,23 +692,39 @@ function repeatVideo(questionNumber) {
         const counter = document.getElementById('counter' + questionNumber);
         counter.textContent = `Repeats remaining: ${repeatCounts[questionNumber]}`;
 
-        // Check if it's Question 1 (iframe) or other questions (video)
-        if (questionNumber === 1) {
-            // Question 1 uses iframe - reload it to restart
-            const iframe = document.getElementById('iframe1');
-            if (iframe) {
-                const src = iframe.src;
-                iframe.src = src;
-            }
-        } else {
-            // Questions 2-5 use video tags
-            const video = document.getElementById('video' + questionNumber);
-            if (video) {
-                video.currentTime = 0;
-                video.play().catch(err => {
-                    console.log('Video play prevented:', err);
-                });
-            }
+        // Reset UI elements
+        const startBtn = document.getElementById('startRecordBtn' + questionNumber);
+        const stopBtn = document.getElementById('stopRecordBtn' + questionNumber);
+
+        // Reset buttons - show start button, hide stop button
+        if (startBtn) {
+            startBtn.style.display = 'inline-block';
+        }
+        if (stopBtn) stopBtn.style.display = 'none';
+
+        // Clear any recorded blob
+        delete recordedBlobs[questionNumber];
+
+        // Stop current recording if active
+        if (window.recordingManager?.isRecording) {
+            window.recordingManager.stopQuestionRecording().catch(err => {
+                console.error('Error stopping recording on repeat:', err);
+            });
+        }
+
+        // Play video
+        const video = document.getElementById('video' + questionNumber);
+        if (video) {
+            video.currentTime = 0;
+
+            // When video ends, just log (button already enabled)
+            video.onended = () => {
+                startRecordingCountdown(questionNumber);
+            };
+
+            video.play().catch(err => {
+                console.log('Video play prevented:', err);
+            });
         }
 
         // Disable button if no repeats left
@@ -325,9 +736,10 @@ function repeatVideo(questionNumber) {
     }
 }
 
-function repeatInstructions() {
+function repeatInstructions(testType) {
     // Restart instructions video (no limit on repeats)
-    const videoInstructions = document.getElementById('videoInstructions');
+    const videoId = testType === 'ENGLISH' ? 'videoInstructionsEnglish' : 'videoInstructionsNonEnglish';
+    const videoInstructions = document.getElementById(videoId);
     if (videoInstructions) {
         videoInstructions.currentTime = 0;
         videoInstructions.play().catch(err => {
@@ -342,24 +754,53 @@ async function completeTest() {
     isChangingPage = true;
 
     try {
-        // Stop all videos
+        // Stop timer and all videos
+        stopTimer();
         stopAllVideos();
 
-        // Mark Question 5 as finished (queues upload)
-        if (window.recordingManager) {
-            window.recordingManager.finishQuestion(5);
-        }
-
         // Show upload page
-        currentPage = 10;
+        currentPage = 11;
         document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-        document.getElementById('page10').classList.add('active');
+        document.getElementById('page11').classList.add('active');
         document.getElementById('uploadSpinner').style.display = 'block';
-        document.getElementById('uploadMessage').textContent = 'Finalizing your recording...';
+        document.getElementById('uploadMessage').textContent = 'Finalizing uploads...';
 
-        // Stop recording and wait for all background uploads to complete
+        // Stop Q5 recording and upload it
         if (window.recordingManager) {
-            await window.recordingManager.stopAndUploadAll();
+            const blob = await window.recordingManager.stopQuestionRecording();
+            window.recordingManager.uploadQuestionRecording(blob, 5).catch(err => {
+                console.error('Q5 upload failed:', err);
+            });
+
+            // Wait for all pending uploads to complete
+            await window.recordingManager.waitForAllUploads();
+
+            // Combine videos into one file
+            document.getElementById('uploadMessage').textContent = 'Combining videos...';
+
+            try {
+                const combineResponse = await fetch('/api/combine', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        firstName: window.testCredentials.firstName,
+                        lastName: window.testCredentials.lastName,
+                        passcode: window.testCredentials.passcode,
+                        testType: window.testCredentials.testType
+                    })
+                });
+
+                if (combineResponse.ok) {
+                    console.log('Videos combined successfully');
+                } else {
+                    console.error('Video combination failed');
+                }
+            } catch (error) {
+                console.error('Error combining videos:', error);
+                // Don't fail the whole test if combination fails
+            }
         }
 
         // Show success
@@ -369,20 +810,53 @@ async function completeTest() {
 
         // Wait 2 seconds then show completion
         setTimeout(() => {
-            window.recordingManager.stopAllRecording();
-            currentPage = 11;
+            if (window.recordingManager) {
+                window.recordingManager.stopAllRecording();
+            }
+
+            // Set completion message based on test type
+            const testType = window.testCredentials?.testType || 'ENGLISH';
+            const testName = testType === 'ENGLISH' ? 'English Proficiency Screening' : 'Non-English Proficiency Screening';
+            document.getElementById('completionMessage').textContent = `Thank you for completing the ${testName}!`;
+
+            currentPage = 12;
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            document.getElementById('page11').classList.add('active');
+            document.getElementById('page12').classList.add('active');
         }, 2000);
 
     } catch (error) {
         console.error('Error completing test:', error);
         document.getElementById('uploadSpinner').style.display = 'none';
         document.getElementById('uploadError').style.display = 'block';
-        document.getElementById('uploadMessage').textContent = 'Some uploads may have failed. Please contact support.';
+        document.getElementById('uploadMessage').textContent = 'Upload failed. Please contact support.';
     } finally {
         isChangingPage = false;
     }
+}
+
+function returnToTestSelection() {
+    // Reset test credentials (keep passcode and name, clear test type)
+    if (window.testCredentials) {
+        delete window.testCredentials.testType;
+    }
+
+    // Reset timer
+    timeRemaining = 1500;
+
+    // Reset repeat counts for all questions
+    repeatCounts[1] = 2;
+    repeatCounts[2] = 2;
+    repeatCounts[3] = 2;
+    repeatCounts[4] = 2;
+    repeatCounts[5] = 2;
+
+    // Go back to test selection page
+    goToPage(4);
+
+    // Re-check completion status
+    setTimeout(() => {
+        checkTestCompletion();
+    }, 500);
 }
 
 // Allow Enter key to submit passcode

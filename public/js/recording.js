@@ -1,4 +1,4 @@
-// Recording Management - Per Question Recording
+// Recording Management - Per Question with Non-Blocking Uploads
 class RecordingManager {
     constructor() {
         this.mediaRecorder = null;
@@ -7,6 +7,7 @@ class RecordingManager {
         this.isRecording = false;
         this.participantInfo = null;
         this.currentQuestion = 0;
+        this.pendingUploads = []; // Track uploads in progress
     }
 
     async requestPermissions() {
@@ -23,7 +24,7 @@ class RecordingManager {
                     sampleRate: 44100
                 }
             });
-            
+
             console.log('Camera and microphone access granted');
             return true;
         } catch (error) {
@@ -64,11 +65,11 @@ class RecordingManager {
         this.recordedChunks = [];
 
         try {
-            // ULTRA COMPRESSED VIDEO (potato quality for fast upload)
+            // Low quality video, high quality audio for transcription
             const videoOptions = {
                 mimeType: 'video/webm;codecs=vp8,opus',
-                videoBitsPerSecond: 100000,  // 100 kbps - potato quality
-                audioBitsPerSecond: 96000    // 96 kbps - decent audio
+                videoBitsPerSecond: 100000,  // 100 kbps - potato quality video
+                audioBitsPerSecond: 192000   // 192 kbps - high quality audio for AI transcription
             };
 
             if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) {
@@ -107,7 +108,7 @@ class RecordingManager {
 
             this.mediaRecorder.onstop = () => {
                 this.isRecording = false;
-                
+
                 // Create blob from recorded chunks
                 const blob = new Blob(this.recordedChunks, {
                     type: 'video/webm'
@@ -122,33 +123,57 @@ class RecordingManager {
         });
     }
 
-    async uploadQuestionRecording(blob) {
+    async uploadQuestionRecording(blob, questionNumber) {
         const timestamp = new Date().toISOString();
-        const filename = `Question_${this.currentQuestion}_${timestamp}.webm`;
+        const testType = window.testCredentials?.testType || 'ENGLISH';
+        const filename = `Question_${questionNumber}_${timestamp}.webm`;
 
         const formData = new FormData();
         formData.append('video', blob, filename);
         formData.append('firstName', this.participantInfo.firstName);
         formData.append('lastName', this.participantInfo.lastName);
         formData.append('passcode', this.participantInfo.passcode);
-        formData.append('questionNumber', this.currentQuestion);
+        formData.append('questionNumber', questionNumber);
         formData.append('timestamp', timestamp);
+        formData.append('testType', testType);
 
-        try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-
+        const uploadPromise = fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
             if (!response.ok) {
                 throw new Error(`Upload failed: ${response.statusText}`);
             }
-
-            const result = await response.json();
-            console.log(`Question ${this.currentQuestion} uploaded:`, result);
+            return response.json();
+        })
+        .then(result => {
+            console.log(`Question ${questionNumber} uploaded successfully:`, result);
             return result;
+        })
+        .catch(error => {
+            console.error(`Question ${questionNumber} upload error:`, error);
+            throw error;
+        });
+
+        // Track this upload
+        this.pendingUploads.push(uploadPromise);
+
+        return uploadPromise;
+    }
+
+    async waitForAllUploads() {
+        console.log(`Waiting for ${this.pendingUploads.length} uploads to complete...`);
+
+        if (this.pendingUploads.length === 0) {
+            return;
+        }
+
+        try {
+            await Promise.all(this.pendingUploads);
+            console.log('All uploads completed successfully');
         } catch (error) {
-            console.error('Upload error:', error);
+            console.error('Some uploads failed:', error);
             throw error;
         }
     }
@@ -156,7 +181,7 @@ class RecordingManager {
     stopAllRecording() {
         // Hide recording indicator
         document.getElementById('recordingIndicator').classList.remove('active');
-        
+
         // Stop all tracks
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
